@@ -1,0 +1,17 @@
+import { Queue } from "bullmq";
+import IORedis from "ioredis";
+
+const connection = new IORedis(
+  process.env.REDIS_URL || "redis://redis:6379",
+  { maxRetriesPerRequest: null }
+);
+
+export const blendsignQueue = new Queue("blendsign", { connection });
+
+export async function enqueueSendSigningLink(signerId: string) {
+  await blendsignQueue.add("send-signing-link", { signerId });
+}
+
+export async function enqueueSealDocument(envelopeId: string) {
+  await blendsignQueue.add("seal-document", { envelopeId });
+}

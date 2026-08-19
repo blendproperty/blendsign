@@ -44,11 +44,32 @@ the ACME challenge will fail.
 
 ## Project status
 
-This is an early scaffold: data model, Docker/Traefik deployment, and a
-skeleton envelope-creation API + signer view are in place. Not yet built:
-PDF field-placement editor, signature capture UI, email/WhatsApp delivery,
-PDF flattening/sealing, and the POPIA consent/retention flows described in
-the project scope doc.
+End-to-end signing flow works: upload a PDF at `/new`, add signers, send —
+each signer gets a tokenized link (`/sign/[token]`), draws their signature
+or fills fields, and submits with explicit consent. Once every signer has
+signed, a background job flattens the field values onto the PDF, appends a
+certificate-of-completion page with the full audit trail, computes a
+sha256 hash for tamper-evidence, and stores the sealed PDF.
+
+Still simplified / not yet built:
+
+- **Field placement is hardcoded** (`/new` auto-places one signature box
+  per signer on page 1) rather than a drag-and-drop editor over the
+  rendered PDF. This is the next priece of work.
+- **No auth** — `/new` posts a hardcoded `orgId`/`createdById`. Needs real
+  auth (NextAuth or similar) before this is usable beyond a single person.
+- **WhatsApp delivery** logs a `wa.me` link rather than sending via the
+  WhatsApp Business API — fine for manual send in the interim, not
+  automated.
+- **Email** uses SMTP via nodemailer if `SMTP_HOST` is set, otherwise logs
+  to console — wire up real SMTP creds (or a transactional email provider)
+  before relying on it.
+- **POPIA consent/retention flows** (privacy policy acceptance, data
+  deletion tooling, retention period enforcement) are not yet built —
+  see the project scope doc.
+- Expiry (`expire-envelopes` job) exists but nothing schedules it yet —
+  needs a cron trigger, e.g. via BullMQ repeatable jobs or an external
+  scheduler hitting a cron endpoint.
 
 ## Architecture
 

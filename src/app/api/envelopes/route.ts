@@ -3,6 +3,16 @@ import { z } from "zod";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 
+const fieldSchema = z.object({
+  signerIndex: z.number().int(), // index into `signers` array below
+  type: z.enum(["SIGNATURE", "INITIALS", "DATE", "TEXT", "CHECKBOX"]),
+  page: z.number().int().min(1),
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  width: z.number().min(0).max(1),
+  height: z.number().min(0).max(1),
+});
+
 const createEnvelopeSchema = z.object({
   orgId: z.string(),
   createdById: z.string(),
@@ -18,18 +28,20 @@ const createEnvelopeSchema = z.object({
       })
     )
     .min(1),
+  fields: z.array(fieldSchema).default([]),
 });
 
-// POST /api/envelopes — create a draft envelope with signers.
-// The actual PDF upload happens separately against object storage;
-// this expects `originalKey` to already reference the uploaded file.
+// POST /api/envelopes — create a draft envelope with signers and field
+// placements, then move it straight to SENT and enqueue delivery to the
+// first-order signer(s). The PDF itself must already be uploaded via
+// /api/documents/upload-url before calling this.
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = createEnvelopeSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { orgId, createdById, title, originalKey, signers } = parsed.data;
+  const { orgId, createdById, title, originalKey, signers, fields } = parsed.data;
 
   const envelope = await prisma.envelope.create({
     data: {
@@ -37,6 +49,7 @@ export async function POST(req: NextRequest) {
       createdById,
       title,
       originalKey,
+      status: "SENT",
       signers: {
         create: signers.map((s) => ({
           name: s.name,
@@ -52,6 +65,31 @@ export async function POST(req: NextRequest) {
     },
     include: { signers: true },
   });
+
+  // fields reference signers by array index; map to the created signer IDs
+  if (fields.length) {
+    await prisma.field.createMany({
+      data: fields.map((f) => ({
+        envelopeId: envelope.id,
+        signerId: envelope.signers[f.signerIndex].id,
+        type: f.type,
+        page: f.page,
+        x: f.x,
+        y: f.y,
+        width: f.width,
+        height: f.height,
+      })),
+    });
+  }
+
+  // enqueue delivery to whichever signer(s) sit at the lowest routing order
+  const { enqueueSendSigningLink } = await import("@/lib/queue");
+  const lowestOrder = Math.min(...envelope.signers.map((s) => s.order));
+  await Promise.all(
+    envelope.signers
+      .filter((s) => s.order === lowestOrder)
+      .map((s) => enqueueSendSigningLink(s.id))
+  );
 
   return NextResponse.json({ envelope }, { status: 201 });
 }

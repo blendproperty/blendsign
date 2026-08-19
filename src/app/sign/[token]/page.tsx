@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { presignedDownloadUrl } from "@/lib/storage";
+import SignClient from "./SignClient";
 
 export const dynamic = "force-dynamic";
 
@@ -17,15 +19,37 @@ export default async function SignPage({
 
   if (!signer) return notFound();
 
+  const docUrl = await presignedDownloadUrl(signer.envelope.originalKey);
+
   return (
     <main style={{ maxWidth: 800, margin: "40px auto", padding: "0 24px" }}>
       <h1>{signer.envelope.title}</h1>
       <p>Signing as {signer.name}</p>
-      <p>Status: {signer.status}</p>
-      {/* TODO: PDF.js viewer + field overlay + signature capture pad */}
-      <p style={{ color: "#888" }}>
-        Document viewer and signature capture to be implemented here.
-      </p>
+
+      {signer.status === "SIGNED" ? (
+        <p>You&rsquo;ve already signed this document.</p>
+      ) : (
+        <>
+          <p>
+            <a href={docUrl} target="_blank" rel="noreferrer">
+              View the full document →
+            </a>
+          </p>
+          <SignClient
+            token={params.token}
+            documentTitle={signer.envelope.title}
+            fields={signer.fields.map((f) => ({
+              id: f.id,
+              type: f.type,
+              page: f.page,
+              x: f.x,
+              y: f.y,
+              width: f.width,
+              height: f.height,
+            }))}
+          />
+        </>
+      )}
     </main>
   );
 }

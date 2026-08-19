@@ -13,6 +13,9 @@ export default async function Dashboard() {
   return (
     <main style={{ maxWidth: 960, margin: "40px auto", padding: "0 24px" }}>
       <h1>Envelopes</h1>
+      <p>
+        <a href="/new">+ New envelope</a>
+      </p>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
