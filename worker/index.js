@@ -6,7 +6,7 @@ const IORedis = require("ioredis");
 const { prisma } = require("./lib/prisma");
 const { getObjectBuffer, putObjectBuffer } = require("./lib/storage");
 const { flattenEnvelope, sha256Hex } = require("./lib/pdf");
-const { sendSigningLinkEmail } = require("./lib/mail");
+const { sendSigningLinkEmail, sendCompletedDocumentEmail } = require("./lib/mail");
 const { createDecipheriv, createHash, createHmac } = require("crypto");
 
 const connection = new IORedis(process.env.REDIS_URL || "redis://redis:6379", {
@@ -57,32 +57,78 @@ async function handleSendSigningLink({ signerId }) {
 async function handleSealDocument({ envelopeId }) {
   const envelope = await prisma.envelope.findUnique({
     where: { id: envelopeId },
-    include: { fields: true, signers: true, auditEvents: { orderBy: { createdAt: "asc" } } },
+    include: { org: true, fields: true, signers: true, auditEvents: { orderBy: { createdAt: "asc" } } },
   });
   if (!envelope) return;
 
-  const originalBytes = await getObjectBuffer(envelope.originalKey);
-  const finalBytes = await flattenEnvelope({
-    originalBytes,
-    fields: envelope.fields,
-    envelope,
-    signers: envelope.signers,
-    auditEvents: envelope.auditEvents,
-  });
+  let finalBytes;
+  let signedKey = envelope.signedKey;
+  let hash = envelope.sha256;
+  if (envelope.status === "COMPLETED" && signedKey && hash) {
+    finalBytes = await getObjectBuffer(signedKey);
+  } else {
+    const originalBytes = await getObjectBuffer(envelope.originalKey);
+    finalBytes = await flattenEnvelope({
+      originalBytes,
+      fields: envelope.fields,
+      envelope,
+      signers: envelope.signers,
+      auditEvents: envelope.auditEvents,
+    });
 
-  const signedKey = envelope.originalKey.replace(/\.pdf$/i, "") + "-signed.pdf";
-  await putObjectBuffer(signedKey, finalBytes);
-  const hash = sha256Hex(finalBytes);
+    signedKey = envelope.originalKey.replace(/\.pdf$/i, "") + "-signed.pdf";
+    await putObjectBuffer(signedKey, finalBytes);
+    hash = sha256Hex(finalBytes);
 
-  await prisma.envelope.update({
-    where: { id: envelopeId },
-    data: { status: "COMPLETED", signedKey, sha256: hash },
-  });
+    await prisma.envelope.update({
+      where: { id: envelopeId },
+      data: { status: "COMPLETED", signedKey, sha256: hash },
+    });
 
-  await prisma.auditEvent.create({
-    data: { envelopeId, eventType: "completed", metadata: { sha256: hash } },
-  });
-  await handleDeliverWebhook({ envelopeId, event: "envelope.completed" });
+    await prisma.auditEvent.create({
+      data: { envelopeId, eventType: "completed", metadata: { sha256: hash } },
+    });
+    await handleDeliverWebhook({ envelopeId, event: "envelope.completed" });
+  }
+
+  const deliveredEmails = new Set(
+    envelope.auditEvents
+      .filter((event) => event.eventType === "completed_document_sent")
+      .map((event) => String(event.metadata?.email || "").toLowerCase())
+      .filter(Boolean)
+  );
+  const recipients = new Map();
+  for (const signer of envelope.signers) {
+    const email = signer.email?.trim().toLowerCase();
+    if (!email || recipients.has(email)) continue;
+    recipients.set(email, signer);
+  }
+
+  const failures = [];
+  for (const [email, signer] of recipients) {
+    if (deliveredEmails.has(email)) continue;
+    try {
+      const delivery = await sendCompletedDocumentEmail({
+        to: signer.email,
+        signerName: signer.name,
+        documentTitle: envelope.title,
+        document: finalBytes,
+        documentHash: hash,
+        organisation: envelope.org,
+      });
+      await prisma.auditEvent.create({
+        data: {
+          envelopeId,
+          signerId: signer.id,
+          eventType: "completed_document_sent",
+          metadata: { email, messageId: delivery?.messageId || null },
+        },
+      });
+    } catch (error) {
+      failures.push(`${email}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  if (failures.length) throw new Error(`Completed document delivery failed for ${failures.join("; ")}`);
 }
 
 function decryptSecret(value) {

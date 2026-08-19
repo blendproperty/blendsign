@@ -13,7 +13,11 @@ export async function enqueueSendSigningLink(signerId: string) {
 }
 
 export async function enqueueSealDocument(envelopeId: string) {
-  await blendsignQueue.add("seal-document", { envelopeId });
+  await blendsignQueue.add(
+    "seal-document",
+    { envelopeId },
+    { attempts: 5, backoff: { type: "exponential", delay: 3000 } }
+  );
 }
 
 export async function enqueueWebhookEvent(envelopeId: string, event: string) {
