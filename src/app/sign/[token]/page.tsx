@@ -23,10 +23,11 @@ export default async function SignPage({
   const docUrl = `/api/sign/${params.token}/document`;
 
   const organisation = signer.envelope.org;
+  const logoUrl = organisation.logoKey ? `/api/brand/${organisation.id}/logo?v=${organisation.updatedAt.getTime()}` : organisation.logoUrl;
   const brandStyle = { "--sign-primary": organisation.primaryColour, "--sign-accent": organisation.accentColour } as CSSProperties;
   return (
     <main className="sign-recipient" style={brandStyle}>
-      <header className="sign-recipient-header"><div className="sign-company-brand">{organisation.logoUrl ? <img src={organisation.logoUrl} alt={`${organisation.name} logo`} /> : <strong>{organisation.name}</strong>}</div><div className="sign-powered">Securely powered by <b>blendSIGN</b></div></header>
+      <header className="sign-recipient-header"><div className="sign-company-brand">{logoUrl ? <img src={logoUrl} alt={`${organisation.name} logo`} /> : <strong>{organisation.name}</strong>}</div><div className="sign-powered">Securely powered by <b>blendSIGN</b></div></header>
       <div className="sign-recipient-body">
         <section className="sign-document-card"><span><Icon name="file" size={25} /></span><div><small>Signature request from {organisation.name}</small><h1>{signer.envelope.title}</h1><p>Prepared for {signer.name}</p></div><a href={docUrl} target="_blank" rel="noreferrer" className="button button--outline">View PDF</a></section>
         <section className="sign-fields-card panel">

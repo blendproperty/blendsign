@@ -19,6 +19,7 @@ const organisationSchema = z.object({
   primaryColour: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   accentColour: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   emailFromName: optionalText,
+  emailFromAddress: z.string().email().optional().nullable().or(z.literal("")),
 });
 
 export async function GET() {

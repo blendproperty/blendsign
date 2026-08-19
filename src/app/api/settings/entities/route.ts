@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       email: parsed.data.email || null,
       country: parsed.data.country,
       timezone: parsed.data.timezone,
-      emailFromName: `${parsed.data.name} via BlendSign`,
+      emailFromName: parsed.data.name,
       memberships: { create: { userId: context.user.id, role: "owner" } },
     },
   });

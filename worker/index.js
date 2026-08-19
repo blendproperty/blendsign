@@ -20,8 +20,9 @@ async function handleSendSigningLink({ signerId }) {
   });
   if (!signer) return;
 
-  const appDomain = process.env.APP_DOMAIN || "localhost:3000";
-  const link = `https://${appDomain}/sign/${signer.token}`;
+  const appDomain = signer.envelope.org.customDomain || process.env.APP_DOMAIN || "localhost:3000";
+  const baseUrl = /^https?:\/\//i.test(appDomain) ? appDomain.replace(/\/$/, "") : `https://${appDomain.replace(/\/$/, "")}`;
+  const link = `${baseUrl}/sign/${signer.token}`;
 
   if (signer.email) {
     await sendSigningLinkEmail({

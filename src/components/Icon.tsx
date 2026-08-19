@@ -17,6 +17,7 @@ export type IconName =
   | "upload"
   | "file"
   | "shield"
+  | "mail"
   | "menu"
   | "close"
   | "more";
@@ -49,6 +50,7 @@ export function Icon({
     upload: <><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/></>,
     file: <><path d="M6 2h9l4 4v16H6z"/><path d="M15 2v5h5"/></>,
     shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></>,
+    mail: <><path d="M3 5h18v14H3z"/><path d="m3 6 9 7 9-7"/></>,
     menu: <path d="M4 7h16M4 12h16M4 17h16"/>,
     close: <path d="m6 6 12 12M18 6 6 18"/>,
     more: <><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></>,

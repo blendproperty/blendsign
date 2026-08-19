@@ -8,31 +8,33 @@ datasource db {
 }
 
 model Org {
-  id              String            @id @default(cuid())
-  name            String
-  street          String?
-  city            String?
-  province        String?
-  country         String            @default("South Africa")
-  postalCode      String?
-  email           String?
-  timezone        String            @default("Africa/Johannesburg")
-  customDomain    String?
-  legalDisclosure String?
-  logoUrl         String?
-  primaryColour   String            @default("#191919")
-  accentColour    String            @default("#229D6C")
-  emailFromName   String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @default(now()) @updatedAt
-  defaultUsers    User[]            @relation("DefaultOrg")
-  memberships     OrgMembership[]
-  envelopes       Envelope[]
-  contacts        Contact[]
-  apiKeys         ApiKey[]
-  webhooks        WebhookEndpoint[]
-  templates       Template[]
-  signForms       SignForm[]
+  id               String            @id @default(cuid())
+  name             String
+  street           String?
+  city             String?
+  province         String?
+  country          String            @default("South Africa")
+  postalCode       String?
+  email            String?
+  timezone         String            @default("Africa/Johannesburg")
+  customDomain     String?
+  legalDisclosure  String?
+  logoUrl          String?
+  logoKey          String?
+  primaryColour    String            @default("#191919")
+  accentColour     String            @default("#229D6C")
+  emailFromName    String?
+  emailFromAddress String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now()) @updatedAt
+  defaultUsers     User[]            @relation("DefaultOrg")
+  memberships      OrgMembership[]
+  envelopes        Envelope[]
+  contacts         Contact[]
+  apiKeys          ApiKey[]
+  webhooks         WebhookEndpoint[]
+  templates        Template[]
+  signForms        SignForm[]
 }
 
 model User {

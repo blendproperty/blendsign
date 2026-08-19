@@ -15,11 +15,14 @@ export async function POST() {
     secure: Number(process.env.SMTP_PORT || 587) === 465,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
   });
+  const configured = context.org.emailFromAddress || process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@blendproperty.co.za";
+  const address = configured.match(/<([^>]+)>/)?.[1] || configured;
   await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    from: { name: context.org.emailFromName || context.org.name, address },
+    replyTo: context.org.email || undefined,
     to: context.user.email,
-    subject: `BlendSign SMTP test for ${context.org.name}`,
-    text: `Email delivery is working for ${context.org.name}.`,
+    subject: `${context.org.name} email delivery test`,
+    text: `Email delivery and sender branding are working for ${context.org.name}.`,
   });
   return NextResponse.json({ ok: true, sentTo: context.user.email });
 }

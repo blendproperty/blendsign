@@ -14,7 +14,7 @@ export async function ensureDefaultAccount() {
       id: DEFAULT_ORG_ID,
       name: "Blend Property Group",
       email,
-      emailFromName: "BlendSign",
+      emailFromName: "Blend Property Group",
     },
   });
   let user = await prisma.user.findUnique({ where: { email } });

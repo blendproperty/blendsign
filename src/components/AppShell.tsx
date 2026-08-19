@@ -57,7 +57,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [drawer, setDrawer] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [account, setAccount] = useState<{ user: { name: string }; entity: { id: string; name: string }; entities: { id: string; name: string }[] } | null>(null);
+  const [account, setAccount] = useState<{ user: { name: string }; entity: { id: string; name: string; logoKey?: string | null; logoUrl?: string | null; updatedAt?: string }; entities: { id: string; name: string; logoKey?: string | null; logoUrl?: string | null; updatedAt?: string }[] } | null>(null);
   const publicPage = pathname === "/login" || pathname.startsWith("/sign/") || pathname.startsWith("/form/");
 
   useEffect(() => {
@@ -96,6 +96,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const current = nav.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  const activeLogo = account.entity.logoKey ? `/api/brand/${account.entity.id}/logo?v=${account.entity.updatedAt ? new Date(account.entity.updatedAt).getTime() : ""}` : account.entity.logoUrl;
 
   return (
     <div className="app-shell">
@@ -157,7 +158,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <button className="icon-button" aria-label="Notifications"><Icon name="bell" size={19} /></button>
             <div className="top-divider" />
             <div className="account-switcher">
-              <span className="account-avatar">{account.entity.name.split(" ").map((word) => word[0]).join("").slice(0, 2).toUpperCase()}</span>
+              <span className="account-avatar">{activeLogo ? <img src={activeLogo} alt="" /> : account.entity.name.split(" ").map((word) => word[0]).join("").slice(0, 2).toUpperCase()}</span>
               <span className="account-copy"><strong>{account.entity.name}</strong><small>{account.user.name}</small></span>
               <select aria-label="Active company" value={account.entity.id} onChange={(event) => selectEntity(event.target.value)}>
                 {account.entities.map((entity) => <option value={entity.id} key={entity.id}>{entity.name}</option>)}

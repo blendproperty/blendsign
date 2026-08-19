@@ -161,6 +161,7 @@ button { color: inherit; }
 .account-switcher select { width: 22px; height: 32px; border: 0; outline: 0; background: transparent; color: transparent; cursor: pointer; }
 .account-switcher select option { color: var(--ink); }
 .account-avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: #fff; font-size: 11px; font-weight: 700; }
+.account-avatar img { width: 100%; height: 100%; padding: 5px; border-radius: inherit; background: #fff; object-fit: contain; }
 .account-copy { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2; }
 .account-copy strong { font-size: 12px; }
 .account-copy small { margin-top: 3px; color: var(--muted); font-size: 10px; }
@@ -411,14 +412,16 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .check-label input { accent-color: var(--brand-accent-dark); }
 
 .entity-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 17px; }
-.entity-card { display: flex; align-items: center; gap: 20px; min-height: 160px; padding: 24px; }
+.entity-card { display: grid; grid-template-columns: 90px minmax(0, 1fr); align-items: center; gap: 20px; min-height: 190px; padding: 24px; }
 .entity-card.is-active { border-color: var(--brand-accent); box-shadow: inset 0 0 0 1px var(--brand-accent); }
 .entity-brand { flex: 0 0 90px; width: 90px; height: 90px; display: grid; place-items: center; overflow: hidden; border-radius: 8px; font-size: 23px; font-weight: 800; letter-spacing: -.04em; }
 .entity-brand img { width: 76%; height: 76%; object-fit: contain; }
+.entity-card-copy { min-width: 0; }
 .entity-card h3 { margin: 7px 0 5px; font-size: 18px; }
 .entity-card p { margin: 0 0 8px; color: var(--muted); font-size: 12px; }
 .entity-card small { color: #918d86; font-size: 10px; }
 .entity-state { color: var(--brand-accent-dark); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.entity-card-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; padding-top: 15px; border-top: 1px solid var(--line); }
 
 .settings-table-panel { overflow: hidden; }
 .user-cell { display: flex; align-items: center; gap: 11px; }
@@ -516,10 +519,23 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .form-section-title { margin-bottom: 25px; }
 .form-section-title h3 { margin: 0; font-size: 19px; }
 .form-section-title p { margin: 7px 0 0; color: var(--muted); font-size: 12px; }
-.brand-preview { min-height: 170px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; margin-bottom: 25px; border-radius: 7px; }
+.brand-preview { min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; margin-bottom: 25px; border: 1px solid var(--line); border-top: 5px solid; border-radius: 7px; background: #fff; }
 .brand-preview img { max-width: 220px; max-height: 80px; object-fit: contain; }
 .brand-preview > span { font-size: 28px; font-weight: 750; }
+.brand-preview .brand-preview-button { padding: 9px 16px; border-radius: 999px; color: #fff; font-size: 10px; font-weight: 700; }
 .brand-preview small { opacity: .72; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.brand-logo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.brand-logo-upload { flex: 1; min-height: 76px; display: flex; align-items: center; gap: 14px; padding: 15px 17px; border: 1px dashed #aaa59c; border-radius: 8px; background: #faf9f7; cursor: pointer; }
+.brand-logo-upload:hover { border-color: var(--brand-accent); background: var(--brand-accent-soft); }
+.brand-logo-upload.is-uploading { opacity: .65; cursor: wait; }
+.brand-logo-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.brand-logo-upload > svg { color: var(--brand-accent-dark); }
+.brand-logo-upload > span { display: grid; gap: 5px; }
+.brand-logo-upload strong { font-size: 12px; }
+.brand-logo-upload small { color: var(--muted); font-size: 9px; }
+.hosted-logo-option { margin-bottom: 20px; padding: 13px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.hosted-logo-option summary { color: var(--muted); font-size: 10px; font-weight: 700; cursor: pointer; }
+.hosted-logo-option[open] summary { margin-bottom: 13px; }
 .colour-field { display: flex; align-items: center; gap: 8px; }
 .colour-field input[type="color"] { flex: 0 0 43px; width: 43px; height: 43px; padding: 3px; border: 1px solid var(--line); background: #fff; }
 .legal-note { display: flex; gap: 11px; margin-top: 16px; padding: 14px; background: #f2f0eb; color: #6b6760; }
