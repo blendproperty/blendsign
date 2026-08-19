@@ -580,6 +580,11 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .signature-actions .button { min-height: 36px; padding: 0 15px; }
 .captured-signature { width: min(100%, 680px); }
 .captured-signature img { display: block; width: 100%; max-height: 230px; object-fit: contain; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.sign-field--reusable .sign-field-label small { max-width: 135px; line-height: 1.45; }
+.capture-confirmation { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 10px; }
+.capture-confirmation > span { display: grid; gap: 3px; }
+.capture-confirmation strong { font-size: 11px; }
+.capture-confirmation small { color: var(--muted); font-size: 9px; }
 .sign-checkbox-field { min-height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 13px; border: 1px solid var(--line); border-radius: 9px; background: #fff; font-size: 12px; }
 .sign-checkbox-field input { width: 18px; height: 18px; accent-color: var(--sign-accent); }
 .sign-consent { display: flex; align-items: flex-start; gap: 12px; margin: 23px 0; padding: 17px; background: #f2f0eb; color: #514e48; font-size: 11px; line-height: 1.55; }

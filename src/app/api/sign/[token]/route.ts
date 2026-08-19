@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { enqueueSealDocument, enqueueSendSigningLink, enqueueWebhookEvent } from "@/lib/queue";
 
 const submitSchema = z.object({
-  fields: z.array(z.object({ fieldId: z.string(), value: z.string().max(2_000_000) })).max(100),
+  fields: z.array(z.object({ fieldId: z.string(), value: z.string().min(1).max(2_000_000) })).max(300),
   consent: z.literal(true), // explicit consent to sign electronically, required
 });
 
@@ -71,11 +71,17 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const permittedFields = await prisma.field.count({
-    where: { signerId: signer.id, id: { in: parsed.data.fields.map((field) => field.fieldId) } },
+  const assignedFields = await prisma.field.findMany({
+    where: { signerId: signer.id },
+    select: { id: true },
   });
-  if (permittedFields !== parsed.data.fields.length) {
-    return NextResponse.json({ error: "One or more signing fields are invalid." }, { status: 400 });
+  const submittedIds = new Set(parsed.data.fields.map((field) => field.fieldId));
+  if (
+    parsed.data.fields.length !== assignedFields.length ||
+    submittedIds.size !== assignedFields.length ||
+    assignedFields.some((field) => !submittedIds.has(field.id))
+  ) {
+    return NextResponse.json({ error: "Complete every signing field before submitting." }, { status: 400 });
   }
 
   await Promise.all(
