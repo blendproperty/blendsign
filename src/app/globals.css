@@ -450,10 +450,12 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .builder-section { display: grid; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
 .builder-section h3 { margin: 0; font-size: 13px; }
 .builder-section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.role-editor { display: grid; grid-template-columns: 10px 1fr 54px; gap: 7px; align-items: center; padding: 7px; border: 1px solid transparent; border-radius: 9px; cursor: pointer; }
+.role-editor { display: grid; grid-template-columns: 10px 1fr 50px 22px; gap: 7px; align-items: center; padding: 7px; border: 1px solid transparent; border-radius: 9px; cursor: pointer; }
 .role-editor.is-active { border-color: var(--brand-accent); background: var(--brand-accent-soft); }
 .role-editor > span { width: 10px; height: 10px; border-radius: 50%; }
 .role-editor input { min-width: 0; height: 32px; padding: 0 7px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font: inherit; font-size: 10px; }
+.role-remove { width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--danger); font-size: 16px; line-height: 1; cursor: pointer; }
+.role-remove:hover { background: #f5e5e4; }
 .field-tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .field-tool-grid button { min-height: 34px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font-size: 10px; cursor: pointer; }
 .field-tool-grid button.is-active { border-color: var(--brand-accent); background: var(--brand-accent-soft); color: var(--brand-accent-dark); font-weight: 700; }
@@ -483,7 +485,13 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .signform-title-line { display: flex; align-items: center; gap: 10px; }
 .signform-card a:not(.button) { display: block; width: fit-content; max-width: 100%; margin: 8px 0; overflow: hidden; color: var(--brand-accent-dark); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .signform-card small { color: var(--muted); font-size: 9px; }
+.signform-card-actions { display: flex; gap: 8px; }
 .signform-create-form { width: min(760px, 100%); display: grid; gap: 18px; }
+.signform-availability { display: flex; align-items: flex-start; gap: 11px; padding: 15px; border: 1px solid var(--line); border-radius: 8px; background: #faf9f7; }
+.signform-availability input { margin-top: 2px; accent-color: var(--brand-accent); }
+.signform-availability span { display: grid; gap: 4px; }
+.signform-availability strong { font-size: 11px; }
+.signform-availability small { color: var(--muted); font-size: 9px; line-height: 1.45; }
 .public-signform-body { width: min(820px, calc(100% - 36px)); margin: 48px auto 70px; }
 .public-signform-intro { margin-bottom: 25px; text-align: center; }
 .public-signform-intro h1 { margin: 0; font-size: clamp(31px, 4vw, 45px); letter-spacing: -.045em; }
@@ -679,5 +687,5 @@ a.stat-card:hover { border-color: #bbb6ad; }
   .template-builder-sidebar { position: static; max-height: none; }
   .template-recipient-row, .public-role { grid-template-columns: 1fr; }
   .signform-card { grid-template-columns: auto 1fr; }
-  .signform-card > .button { grid-column: 1 / -1; }
+  .signform-card-actions { grid-column: 1 / -1; }
 }

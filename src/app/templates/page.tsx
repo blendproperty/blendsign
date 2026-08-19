@@ -28,7 +28,7 @@ export default async function Templates() {
               <span className="template-card-icon"><Icon name="template" size={24} /></span>
               <div><p className="eyebrow">Signing template</p><h2>{template.name}</h2><p>{template.description || "Reusable PDF signing workflow"}</p></div>
               <dl><div><dt>Signer roles</dt><dd>{template._count.roles}</dd></div><div><dt>Fields</dt><dd>{template._count.fields}</dd></div><div><dt>SignForms</dt><dd>{template._count.signForms}</dd></div></dl>
-              <div className="template-card-actions"><a className="button button--quiet" href={`/api/templates/${template.id}/document`} target="_blank" rel="noreferrer">View PDF</a><Link className="button button--accent" href={`/templates/${template.id}/use`}>Use template</Link></div>
+              <div className="template-card-actions"><a className="button button--quiet" href={`/api/templates/${template.id}/document`} target="_blank" rel="noreferrer">View PDF</a><Link className="button button--quiet" href={`/templates/${template.id}/edit`}>Edit</Link><Link className="button button--accent" href={`/templates/${template.id}/use`}>Use template</Link></div>
             </article>
           ))}
         </section>

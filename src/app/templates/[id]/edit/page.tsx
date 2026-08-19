@@ -1,0 +1,26 @@
+import { notFound, redirect } from "next/navigation";
+import { getRequestContext } from "@/lib/account";
+import { prisma } from "@/lib/prisma";
+import TemplateEditor from "@/components/TemplateEditor";
+
+export const dynamic = "force-dynamic";
+
+export default async function EditTemplatePage({ params }: { params: { id: string } }) {
+  const context = await getRequestContext();
+  if (!context) redirect("/login");
+  const template = await prisma.template.findFirst({
+    where: { id: params.id, orgId: context.org.id },
+    include: { roles: { orderBy: { order: "asc" } }, fields: { orderBy: [{ page: "asc" }, { id: "asc" }] } },
+  });
+  if (!template) notFound();
+  const roleIndex = new Map(template.roles.map((role, index) => [role.id, index]));
+
+  return <TemplateEditor initial={{
+    id: template.id,
+    name: template.name,
+    description: template.description || "",
+    documentUrl: `/api/templates/${template.id}/document`,
+    roles: template.roles.map(({ name, order }) => ({ name, order })),
+    fields: template.fields.map(({ id, roleId, type, page, x, y, width, height }) => ({ id, roleIndex: roleIndex.get(roleId) ?? 0, type, page, x, y, width, height })),
+  }} />;
+}
