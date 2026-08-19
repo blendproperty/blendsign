@@ -52,7 +52,7 @@ export default async function Documents({ searchParams }: { searchParams: { stat
                   <td>{envelope.signers.map((signer) => signer.email || signer.name).join(", ")}</td>
                   <td><span className={`status status--${envelope.status.toLowerCase().replace("_", "-")}`}>{envelope.status.replaceAll("_", " ")}</span></td>
                   <td>{envelope.createdAt.toISOString().slice(0, 10)}</td>
-                  <td><DocumentActions id={envelope.id} /></td>
+                  <td><DocumentActions id={envelope.id} signed={Boolean(envelope.signedKey)} /></td>
                 </tr>
               ))}
             </tbody>
