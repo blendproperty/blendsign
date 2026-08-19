@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { presignedDownloadUrl } from "@/lib/storage";
 import SignClient from "./SignClient";
 import { Icon } from "@/components/Icon";
 import type { CSSProperties } from "react";
@@ -21,7 +20,7 @@ export default async function SignPage({
 
   if (!signer) return notFound();
 
-  const docUrl = await presignedDownloadUrl(signer.envelope.originalKey);
+  const docUrl = `/api/sign/${params.token}/document`;
 
   const organisation = signer.envelope.org;
   const brandStyle = { "--sign-primary": organisation.primaryColour, "--sign-accent": organisation.accentColour } as CSSProperties;

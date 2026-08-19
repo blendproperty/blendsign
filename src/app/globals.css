@@ -466,8 +466,13 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .sign-field-label { display: flex; flex-direction: column; gap: 5px; padding-top: 8px; }
 .sign-field-label span { font-size: 12px; font-weight: 750; text-transform: capitalize; }
 .sign-field-label small { color: var(--muted); font-size: 9px; }
-.sign-field canvas { max-width: 100%; background: #fbfaf8; border: 1px dashed #aaa49a; border-radius: 4px; }
-.captured-signature img { display: block; max-width: 100%; border: 1px solid var(--line); background: #fff; }
+.signature-pad { width: min(100%, 680px); }
+.signature-pad--initials { width: min(100%, 360px); }
+.signature-canvas { display: block; width: 100%; height: auto; background: #fff; border: 1px dashed #898989; border-radius: 12px; touch-action: none; cursor: crosshair; }
+.signature-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 11px; }
+.signature-actions .button { min-height: 36px; padding: 0 15px; }
+.captured-signature { width: min(100%, 680px); }
+.captured-signature img { display: block; width: 100%; max-height: 230px; object-fit: contain; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .sign-consent { display: flex; align-items: flex-start; gap: 12px; margin: 23px 0; padding: 17px; background: #f2f0eb; color: #514e48; font-size: 11px; line-height: 1.55; }
 .sign-consent input { flex: 0 0 auto; margin-top: 2px; accent-color: var(--sign-accent); }
 .sign-submit { min-width: 190px; background: var(--sign-primary); color: #fff; }

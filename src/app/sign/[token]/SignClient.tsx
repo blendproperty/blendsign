@@ -71,7 +71,7 @@ export default function SignClient({
 
   return (
     <div className="sign-fields">
-      <div className="sign-fields-heading"><p className="eyebrow">Required fields</p><h2>Complete your signature</h2><p>Review the PDF, complete each field and provide consent below.</p></div>
+      <div className="sign-fields-heading"><p className="eyebrow">Required fields</p><h2>Complete your signing fields</h2><p>Review the PDF, complete each field and provide consent below.</p></div>
       {fields.map((f) => (
         <div className="sign-field" key={f.id}>
           <div className="sign-field-label">
@@ -89,8 +89,9 @@ export default function SignClient({
               </div>
             ) : (
               <SignatureCanvas
-                width={Math.round(f.width * 400) || 300}
-                height={Math.round(f.height * 400) || 100}
+                width={f.type === "INITIALS" ? 360 : 680}
+                height={f.type === "INITIALS" ? 170 : 230}
+                label={f.type === "INITIALS" ? "initials" : "signature"}
                 onCapture={(dataUrl) => setValues((v) => ({ ...v, [f.id]: dataUrl }))}
               />
             )

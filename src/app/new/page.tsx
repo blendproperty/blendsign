@@ -8,7 +8,7 @@ import { Icon } from "@/components/Icon";
 type SignerInput = { name: string; email: string; order: number };
 
 // MVP envelope creation flow: upload a PDF, add signers, send. Field
-// placement here is a simplified default (one signature box on page 1
+// placement here is a simplified default (signature and initials on page 1
 // per signer) rather than a drag-and-drop editor — that's the next thing
 // to build (see README "Project status").
 export default function NewEnvelope() {
@@ -52,15 +52,26 @@ export default function NewEnvelope() {
           title,
           originalKey: upload.key,
           signers,
-          fields: signers.map((_, i) => ({
-            signerIndex: i,
-            type: "SIGNATURE",
-            page: 1,
-            x: 0.1,
-            y: 0.85,
-            width: 0.3,
-            height: 0.08,
-          })),
+          fields: signers.flatMap((_, i) => [
+            {
+              signerIndex: i,
+              type: "SIGNATURE",
+              page: 1,
+              x: 0.1,
+              y: 0.82,
+              width: 0.34,
+              height: 0.1,
+            },
+            {
+              signerIndex: i,
+              type: "INITIALS",
+              page: 1,
+              x: 0.5,
+              y: 0.82,
+              width: 0.15,
+              height: 0.1,
+            },
+          ]),
         }),
       });
       if (!envRes.ok) throw new Error((await envRes.json()).error ?? "failed");
