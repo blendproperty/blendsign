@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Org {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  users     User[]
+  envelopes Envelope[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  org       Org      @relation(fields: [orgId], references: [id])
+  orgId     String
+  email     String   @unique
+  name      String
+  role      String   @default("member") // owner | admin | member
+  createdAt DateTime @default(now())
+  envelopes Envelope[]
+}
+
+enum EnvelopeStatus {
+  DRAFT
+  SENT
+  PARTIALLY_SIGNED
+  COMPLETED
+  DECLINED
+  EXPIRED
+  VOIDED
+}
+
+model Envelope {
+  id          String         @id @default(cuid())
+  org         Org            @relation(fields: [orgId], references: [id])
+  orgId       String
+  createdBy   User           @relation(fields: [createdById], references: [id])
+  createdById String
+  title       String
+  status      EnvelopeStatus @default(DRAFT)
+  originalKey String // object storage key for uploaded PDF
+  signedKey   String? // object storage key for final sealed PDF
+  sha256      String? // hash of final signed document
+  expiresAt   DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  signers     Signer[]
+  fields      Field[]
+  auditEvents AuditEvent[]
+}
+
+enum SignerStatus {
+  PENDING
+  VIEWED
+  SIGNED
+  DECLINED
+}
+
+model Signer {
+  id         String       @id @default(cuid())
+  envelope   Envelope     @relation(fields: [envelopeId], references: [id])
+  envelopeId String
+  name       String
+  email      String?
+  phone      String? // for WhatsApp/SMS delivery
+  order      Int          @default(0) // routing order; same order = parallel
+  token      String       @unique // signing link token
+  status     SignerStatus @default(PENDING)
+  signedAt   DateTime?
+  declinedReason String?
+
+  fields      Field[]
+  auditEvents AuditEvent[]
+}
+
+enum FieldType {
+  SIGNATURE
+  INITIALS
+  DATE
+  TEXT
+  CHECKBOX
+}
+
+model Field {
+  id         String    @id @default(cuid())
+  envelope   Envelope  @relation(fields: [envelopeId], references: [id])
+  envelopeId String
+  signer     Signer    @relation(fields: [signerId], references: [id])
+  signerId   String
+  type       FieldType
+  page       Int
+  x          Float
+  y          Float
+  width      Float
+  height     Float
+  value      String? // captured signature (base64/svg), text, or date
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  envelope   Envelope @relation(fields: [envelopeId], references: [id])
+  envelopeId String
+  signer     Signer?  @relation(fields: [signerId], references: [id])
+  signerId   String?
+  eventType  String // created | sent | viewed | signed | declined | completed | expired
+  ip         String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+}

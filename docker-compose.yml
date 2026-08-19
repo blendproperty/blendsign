@@ -1,0 +1,93 @@
+version: "3.9"
+
+networks:
+  web:
+    external: false
+
+volumes:
+  postgres_data:
+  minio_data:
+  letsencrypt:
+
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.leresolver.acme.httpchallenge=true"
+      - "--certificatesresolvers.leresolver.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.leresolver.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.leresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "letsencrypt:/letsencrypt"
+    networks:
+      - web
+    restart: unless-stopped
+
+  app:
+    build: .
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.blendsign.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.blendsign.entrypoints=websecure"
+      - "traefik.http.routers.blendsign.tls.certresolver=leresolver"
+      - "traefik.http.services.blendsign.loadbalancer.server.port=3000"
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: node worker/index.js
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    networks:
+      - web
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - web
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - web
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    networks:
+      - web
+    restart: unless-stopped
