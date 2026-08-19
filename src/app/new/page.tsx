@@ -27,17 +27,22 @@ export default function NewEnvelope() {
 
   async function submit() {
     if (!file) return setError("Choose a PDF first");
+    if (file.size > 20 * 1024 * 1024) return setError("PDF documents may not exceed 20 MB.");
     setBusy(true);
     setError(null);
     try {
-      // 1. get presigned upload URL and PUT the file directly to storage
-      const upRes = await fetch("/api/documents/upload-url", {
+      // 1. upload through BlendSign so the private MinIO service never
+      // needs to be exposed to the browser or configured for CORS.
+      const upRes = await fetch("/api/documents/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: file.name, contentType: file.type }),
+        headers: {
+          "Content-Type": "application/pdf",
+          "x-file-name": encodeURIComponent(file.name),
+        },
+        body: file,
       });
-      const { url, key } = await upRes.json();
-      await fetch(url, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+      const upload = await upRes.json();
+      if (!upRes.ok) throw new Error(upload.error || "The PDF could not be uploaded.");
 
       // 2. create the envelope in the active company workspace
       const envRes = await fetch("/api/envelopes", {
@@ -45,7 +50,7 @@ export default function NewEnvelope() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
-          originalKey: key,
+          originalKey: upload.key,
           signers,
           fields: signers.map((_, i) => ({
             signerIndex: i,

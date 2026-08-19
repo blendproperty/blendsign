@@ -32,8 +32,8 @@ const createEnvelopeSchema = z.object({
 
 // POST /api/envelopes — create a draft envelope with signers and field
 // placements, then move it straight to SENT and enqueue delivery to the
-// first-order signer(s). The PDF itself must already be uploaded via
-// /api/documents/upload-url before calling this.
+// first-order signer(s). The PDF itself must already be uploaded through
+// /api/documents/upload before calling this.
 export async function POST(req: NextRequest) {
   const context = await getRequestContext();
   if (!context) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });

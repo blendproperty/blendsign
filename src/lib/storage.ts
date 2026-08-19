@@ -22,15 +22,6 @@ export const s3 = new S3Client({
 
 const BUCKET = process.env.S3_BUCKET || "blendsign-documents";
 
-export async function presignedUploadUrl(key: string, contentType: string) {
-  const command = new PutObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-    ContentType: contentType,
-  });
-  return getSignedUrl(s3, command, { expiresIn: 300 });
-}
-
 export async function presignedDownloadUrl(key: string) {
   const command = new GetObjectCommand({ Bucket: BUCKET, Key: key });
   return getSignedUrl(s3, command, { expiresIn: 300 });
