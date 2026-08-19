@@ -58,7 +58,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [drawer, setDrawer] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [account, setAccount] = useState<{ user: { name: string }; entity: { id: string; name: string }; entities: { id: string; name: string }[] } | null>(null);
-  const publicPage = pathname === "/login" || pathname.startsWith("/sign/");
+  const publicPage = pathname === "/login" || pathname.startsWith("/sign/") || pathname.startsWith("/form/");
 
   useEffect(() => {
     setDrawer(null);

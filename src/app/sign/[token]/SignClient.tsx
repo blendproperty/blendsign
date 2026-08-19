@@ -95,10 +95,19 @@ export default function SignClient({
                 onCapture={(dataUrl) => setValues((v) => ({ ...v, [f.id]: dataUrl }))}
               />
             )
+          ) : f.type === "CHECKBOX" ? (
+            <label className="sign-checkbox-field">
+              <input
+                type="checkbox"
+                checked={values[f.id] === "X"}
+                onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.checked ? "X" : "" }))}
+              />
+              <span>Tick to confirm</span>
+            </label>
           ) : (
             <input
-              type="text"
-              placeholder={f.type === "DATE" ? "DD/MM/YYYY" : "Type here"}
+              type={f.type === "DATE" ? "date" : "text"}
+              placeholder="Type here"
               value={values[f.id] || ""}
               onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))}
               className="field-input"

@@ -31,6 +31,8 @@ model Org {
   contacts        Contact[]
   apiKeys         ApiKey[]
   webhooks        WebhookEndpoint[]
+  templates       Template[]
+  signForms       SignForm[]
 }
 
 model User {
@@ -51,6 +53,7 @@ model User {
   updatedAt    DateTime        @default(now()) @updatedAt
   envelopes    Envelope[]
   memberships  OrgMembership[]
+  templates    Template[]
 }
 
 model OrgMembership {
@@ -109,6 +112,70 @@ model WebhookEndpoint {
   updatedAt       DateTime @updatedAt
 
   @@index([orgId, enabled])
+}
+
+model Template {
+  id          String          @id @default(cuid())
+  org         Org             @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orgId       String
+  createdBy   User            @relation(fields: [createdById], references: [id])
+  createdById String
+  name        String
+  description String?
+  originalKey String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  roles       TemplateRole[]
+  fields      TemplateField[]
+  signForms   SignForm[]
+
+  @@index([orgId, name])
+}
+
+model TemplateRole {
+  id         String          @id @default(cuid())
+  template   Template        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  templateId String
+  name       String
+  order      Int             @default(0)
+  fields     TemplateField[]
+
+  @@unique([templateId, name])
+  @@index([templateId, order])
+}
+
+model TemplateField {
+  id         String       @id @default(cuid())
+  template   Template     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  templateId String
+  role       TemplateRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId     String
+  type       FieldType
+  page       Int
+  x          Float
+  y          Float
+  width      Float
+  height     Float
+  required   Boolean      @default(true)
+
+  @@index([templateId, page])
+  @@index([roleId])
+}
+
+model SignForm {
+  id          String   @id @default(cuid())
+  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orgId       String
+  template    Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  templateId  String
+  name        String
+  slug        String   @unique
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([orgId, active])
 }
 
 enum EnvelopeStatus {
