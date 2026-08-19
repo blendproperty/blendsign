@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Icon, IconName } from "./Icon";
+import { BlendSignLogo } from "./BlendSignLogo";
 
 type NavItem = {
   label: string;
@@ -76,7 +77,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [publicPage, router]);
 
   if (publicPage) return <>{children}</>;
-  if (!account) return <div className="app-loading"><span className="brand-name">blend</span><span className="brand-product">SIGN</span></div>;
+  if (!account) return <div className="app-loading"><BlendSignLogo /></div>;
 
   async function selectEntity(entityId: string) {
     const response = await fetch("/api/settings/entities/select", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entityId }) });
@@ -144,9 +145,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <button className="mobile-menu" onClick={() => setMobileOpen((value) => !value)} aria-label="Toggle menu">
             <Icon name={mobileOpen ? "close" : "menu"} />
           </button>
-          <Link href="/dashboard" className="brand-lockup">
-            <span className="brand-name">blend</span>
-            <span className="brand-product">SIGN</span>
+          <Link href="/dashboard" className="brand-lockup" aria-label="BlendSign home">
+            <BlendSignLogo />
           </Link>
           <div className="top-bar-actions">
             <label className="search-box">

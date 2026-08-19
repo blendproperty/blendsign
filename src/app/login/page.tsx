@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
+import { BlendSignLogo } from "@/components/BlendSignLogo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,7 +30,7 @@ export default function LoginPage() {
   return (
     <main className="login-page">
       <section className="login-brand">
-        <div className="login-brand-mark">B</div>
+        <BlendSignLogo inverse className="login-brand-logo" />
         <p className="eyebrow">Blend Property Group</p>
         <h1>Secure agreements.<br />One stable.</h1>
         <p>Manage every signing workflow across Blend Property Group, Stor 24 and future operating companies.</p>
@@ -37,7 +38,7 @@ export default function LoginPage() {
       </section>
       <section className="login-panel">
         <form className="login-card" onSubmit={submit}>
-          <div className="brand-lockup"><span className="brand-name">blend</span><span className="brand-product">SIGN</span></div>
+          <BlendSignLogo className="login-card-logo" />
           <div><p className="eyebrow">Administration</p><h2>Sign in to BlendSign</h2><p>Use your administrator or company user credentials.</p></div>
           <label className="field-label">Email address<input className="field-input" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
           <label className="field-label">Password<input className="field-input" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
