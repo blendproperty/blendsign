@@ -1,15 +1,21 @@
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { prisma } from "@/lib/prisma";
+import { getRequestContext } from "@/lib/account";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function Dashboard() {
+  const context = await getRequestContext();
+  if (!context) redirect("/login");
+  const companyFilter = { orgId: context.org.id, deletedAt: null };
   const [total, inProgress, completed, recent] = await Promise.all([
-    prisma.envelope.count(),
-    prisma.envelope.count({ where: { status: { in: ["SENT", "PARTIALLY_SIGNED"] } } }),
-    prisma.envelope.count({ where: { status: "COMPLETED" } }),
+    prisma.envelope.count({ where: companyFilter }),
+    prisma.envelope.count({ where: { ...companyFilter, status: { in: ["SENT", "PARTIALLY_SIGNED"] } } }),
+    prisma.envelope.count({ where: { ...companyFilter, status: "COMPLETED" } }),
     prisma.envelope.findMany({
+      where: companyFilter,
       orderBy: { createdAt: "desc" },
       take: 5,
       include: { signers: true },
@@ -20,7 +26,7 @@ export default async function Dashboard() {
     <div className="page dashboard-page">
       <section className="page-heading dashboard-heading">
         <div>
-          <p className="eyebrow">Blend Property Group</p>
+          <p className="eyebrow">{context.org.name}</p>
           <h1>Good morning</h1>
           <p>Send, track and manage property documents from one secure workspace.</p>
         </div>

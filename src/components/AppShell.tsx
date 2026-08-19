@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Icon, IconName } from "./Icon";
 
@@ -40,29 +40,59 @@ const nav: NavItem[] = [
     href: "/settings",
     icon: "settings",
     drawer: [
-      { heading: "General", label: "My profile", href: "/settings#profile" },
-      { label: "Integrations", href: "/settings#integrations" },
-      { label: "My notifications", href: "/settings#notifications" },
-      { label: "Contacts", href: "/settings#contacts" },
-      { label: "Trash", href: "/settings#trash" },
-      { heading: "Admin", label: "Users and access", href: "/settings#users" },
-      { label: "Account settings", href: "/settings#account" },
-      { label: "Branding", href: "/settings#branding" },
+      { heading: "General", label: "My profile", href: "/settings/profile" },
+      { label: "Integrations", href: "/settings/integrations" },
+      { label: "Contacts", href: "/settings/contacts" },
+      { label: "Trash", href: "/settings/trash" },
+      { heading: "Admin", label: "Users and access", href: "/settings/users" },
+      { label: "Companies", href: "/settings/entities" },
+      { label: "Branding", href: "/settings/branding" },
     ],
   },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [drawer, setDrawer] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [account, setAccount] = useState<{ user: { name: string }; entity: { id: string; name: string }; entities: { id: string; name: string }[] } | null>(null);
+  const publicPage = pathname === "/login" || pathname.startsWith("/sign/");
 
   useEffect(() => {
     setDrawer(null);
     setMobileOpen(false);
   }, [pathname]);
 
-  if (pathname.startsWith("/sign/")) return <>{children}</>;
+  useEffect(() => {
+    if (publicPage) return;
+    fetch("/api/auth/me").then(async (response) => {
+      if (response.status === 401) {
+        router.replace("/login");
+        return;
+      }
+      if (response.ok) setAccount(await response.json());
+    });
+  }, [publicPage, router]);
+
+  if (publicPage) return <>{children}</>;
+  if (!account) return <div className="app-loading"><span className="brand-name">blend</span><span className="brand-product">SIGN</span></div>;
+
+  async function selectEntity(entityId: string) {
+    const response = await fetch("/api/settings/entities/select", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entityId }) });
+    if (response.ok) {
+      const entity = account?.entities.find((item) => item.id === entityId);
+      if (entity) setAccount((current) => current ? { ...current, entity } : current);
+      router.refresh();
+      window.location.reload();
+    }
+  }
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
+    router.refresh();
+  }
 
   const current = nav.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
 
@@ -126,11 +156,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </label>
             <button className="icon-button" aria-label="Notifications"><Icon name="bell" size={19} /></button>
             <div className="top-divider" />
-            <button className="account-switcher">
-              <span className="account-avatar">BP</span>
-              <span className="account-copy"><strong>Blend Property Group</strong><small>Administrator</small></span>
-              <Icon name="chevron" size={15} />
-            </button>
+            <div className="account-switcher">
+              <span className="account-avatar">{account.entity.name.split(" ").map((word) => word[0]).join("").slice(0, 2).toUpperCase()}</span>
+              <span className="account-copy"><strong>{account.entity.name}</strong><small>{account.user.name}</small></span>
+              <select aria-label="Active company" value={account.entity.id} onChange={(event) => selectEntity(event.target.value)}>
+                {account.entities.map((entity) => <option value={entity.id} key={entity.id}>{entity.name}</option>)}
+              </select>
+            </div>
+            <button className="icon-button" onClick={logout} aria-label="Sign out"><Icon name="close" size={18} /></button>
           </div>
         </header>
         <main className="app-content">{children}</main>

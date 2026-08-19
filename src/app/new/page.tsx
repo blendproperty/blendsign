@@ -39,14 +39,11 @@ export default function NewEnvelope() {
       const { url, key } = await upRes.json();
       await fetch(url, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
 
-      // 2. create the envelope — TODO: replace hardcoded orgId/createdById
-      // once auth is wired up
+      // 2. create the envelope in the active company workspace
       const envRes = await fetch("/api/envelopes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          orgId: "demo-org",
-          createdById: "demo-user",
           title,
           originalKey: key,
           signers,

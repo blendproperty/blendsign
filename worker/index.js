@@ -7,6 +7,7 @@ const { prisma } = require("./lib/prisma");
 const { getObjectBuffer, putObjectBuffer } = require("./lib/storage");
 const { flattenEnvelope, sha256Hex } = require("./lib/pdf");
 const { sendSigningLinkEmail } = require("./lib/mail");
+const { createDecipheriv, createHash, createHmac } = require("crypto");
 
 const connection = new IORedis(process.env.REDIS_URL || "redis://redis:6379", {
   maxRetriesPerRequest: null,
@@ -15,7 +16,7 @@ const connection = new IORedis(process.env.REDIS_URL || "redis://redis:6379", {
 async function handleSendSigningLink({ signerId }) {
   const signer = await prisma.signer.findUnique({
     where: { id: signerId },
-    include: { envelope: true },
+    include: { envelope: { include: { org: true } } },
   });
   if (!signer) return;
 
@@ -28,15 +29,22 @@ async function handleSendSigningLink({ signerId }) {
       signerName: signer.name,
       documentTitle: signer.envelope.title,
       link,
+      organisation: signer.envelope.org,
     });
   } else if (signer.phone) {
-    // MVP fallback: log a wa.me deep link. Swap for the WhatsApp Business
-    // API (WHATSAPP_BUSINESS_TOKEN) to send this programmatically instead
-    // of relying on the signer to click a manually-shared link.
-    const waLink = `https://wa.me/${signer.phone.replace(/\D/g, "")}?text=${encodeURIComponent(
-      `${signer.name}, please sign "${signer.envelope.title}": ${link}`
-    )}`;
-    console.log("WhatsApp delivery (manual/dev fallback):", waLink);
+    const message = `${signer.name}, ${signer.envelope.org.name} has asked you to sign "${signer.envelope.title}": ${link}`;
+    if (process.env.WHATSAPP_BUSINESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_API_VERSION) {
+      const response = await fetch(`https://graph.facebook.com/${process.env.WHATSAPP_API_VERSION}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${process.env.WHATSAPP_BUSINESS_TOKEN}`, "content-type": "application/json" },
+        body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: signer.phone.replace(/\D/g, ""), type: "text", text: { preview_url: false, body: message } }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) throw new Error(`WhatsApp delivery failed with HTTP ${response.status}`);
+    } else {
+      const waLink = `https://wa.me/${signer.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+      console.log("WhatsApp delivery (manual fallback):", waLink);
+    }
   } else {
     console.warn("Signer has no email or phone", signerId);
   }
@@ -74,6 +82,43 @@ async function handleSealDocument({ envelopeId }) {
   await prisma.auditEvent.create({
     data: { envelopeId, eventType: "completed", metadata: { sha256: hash } },
   });
+  await handleDeliverWebhook({ envelopeId, event: "envelope.completed" });
+}
+
+function decryptSecret(value) {
+  const [iv, tag, encrypted] = value.split(".");
+  const key = createHash("sha256").update(process.env.SESSION_SECRET).digest();
+  const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(iv, "base64url"));
+  decipher.setAuthTag(Buffer.from(tag, "base64url"));
+  return Buffer.concat([decipher.update(Buffer.from(encrypted, "base64url")), decipher.final()]).toString("utf8");
+}
+
+async function handleDeliverWebhook({ envelopeId, event }) {
+  const envelope = await prisma.envelope.findUnique({
+    where: { id: envelopeId },
+    include: { signers: true },
+  });
+  if (!envelope) return;
+  const endpoints = await prisma.webhookEndpoint.findMany({
+    where: { orgId: envelope.orgId, enabled: true, events: { has: event } },
+  });
+  if (!endpoints.length) return;
+  const body = JSON.stringify({
+    id: `evt_${Date.now()}`,
+    event,
+    createdAt: new Date().toISOString(),
+    data: {
+      envelopeId: envelope.id,
+      title: envelope.title,
+      status: envelope.status,
+      signers: envelope.signers.map(({ id, name, email, phone, status, signedAt }) => ({ id, name, email, phone, status, signedAt })),
+    },
+  });
+  await Promise.all(endpoints.map(async (endpoint) => {
+    const signature = createHmac("sha256", decryptSecret(endpoint.secretEncrypted)).update(body).digest("hex");
+    const response = await fetch(endpoint.url, { method: "POST", headers: { "content-type": "application/json", "x-blendsign-event": event, "x-blendsign-signature": `sha256=${signature}` }, body, signal: AbortSignal.timeout(10000) });
+    if (!response.ok) throw new Error(`Webhook ${endpoint.id} returned HTTP ${response.status}`);
+  }));
 }
 
 async function handleExpireEnvelopes() {
@@ -95,6 +140,8 @@ const worker = new Worker(
         return handleSealDocument(job.data);
       case "expire-envelopes":
         return handleExpireEnvelopes();
+      case "deliver-webhook":
+        return handleDeliverWebhook(job.data);
       default:
         console.warn("unknown job", job.name);
     }

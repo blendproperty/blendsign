@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { prisma } from "@/lib/prisma";
+import { getRequestContext } from "@/lib/account";
+import { redirect } from "next/navigation";
+import DocumentActions from "@/components/DocumentActions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +20,10 @@ const labels: Record<string, string> = {
 };
 
 export default async function Documents({ searchParams }: { searchParams: { status?: string } }) {
+  const context = await getRequestContext();
+  if (!context) redirect("/login");
   const envelopes = await prisma.envelope.findMany({
+    where: { orgId: context.org.id, deletedAt: null },
     orderBy: { createdAt: "desc" },
     include: { signers: true, createdBy: true },
   });
@@ -46,7 +52,7 @@ export default async function Documents({ searchParams }: { searchParams: { stat
                   <td>{envelope.signers.map((signer) => signer.email || signer.name).join(", ")}</td>
                   <td><span className={`status status--${envelope.status.toLowerCase().replace("_", "-")}`}>{envelope.status.replaceAll("_", " ")}</span></td>
                   <td>{envelope.createdAt.toISOString().slice(0, 10)}</td>
-                  <td><button className="icon-button"><Icon name="more" /></button></td>
+                  <td><DocumentActions id={envelope.id} /></td>
                 </tr>
               ))}
             </tbody>

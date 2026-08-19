@@ -17,10 +17,12 @@ export default function SignClient({
   token,
   fields,
   documentTitle,
+  legalDisclosure,
 }: {
   token: string;
   fields: Field[];
   documentTitle: string;
+  legalDisclosure?: string;
 }) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [consent, setConsent] = useState(false);
@@ -56,8 +58,8 @@ export default function SignClient({
 
   if (done) {
     return (
-      <div>
-        <h2>Signed</h2>
+      <div className="sign-complete">
+        <span>✓</span><h2>Signed successfully</h2>
         <p>
           Thanks — your signature on &ldquo;{documentTitle}&rdquo; has been
           recorded. You&rsquo;ll receive the completed document once every
@@ -68,18 +70,19 @@ export default function SignClient({
   }
 
   return (
-    <div>
+    <div className="sign-fields">
+      <div className="sign-fields-heading"><p className="eyebrow">Required fields</p><h2>Complete your signature</h2><p>Review the PDF, complete each field and provide consent below.</p></div>
       {fields.map((f) => (
-        <div key={f.id} style={{ margin: "20px 0", paddingBottom: 16, borderBottom: "1px solid #eee" }}>
-          <div style={{ fontSize: 13, color: "#666", marginBottom: 6 }}>
-            Page {f.page} — {f.type.toLowerCase()}
+        <div className="sign-field" key={f.id}>
+          <div className="sign-field-label">
+            <span>{f.type.toLowerCase()}</span><small>Page {f.page}</small>
           </div>
           {f.type === "SIGNATURE" || f.type === "INITIALS" ? (
             values[f.id] ? (
-              <div>
-                <img src={values[f.id]} alt="signature" style={{ border: "1px solid #ccc", background: "#fff" }} />
+              <div className="captured-signature">
+                <img src={values[f.id]} alt="signature" />
                 <div>
-                  <button type="button" onClick={() => setValues((v) => ({ ...v, [f.id]: "" }))}>
+                  <button className="text-button" type="button" onClick={() => setValues((v) => ({ ...v, [f.id]: "" }))}>
                     Redo
                   </button>
                 </div>
@@ -97,23 +100,22 @@ export default function SignClient({
               placeholder={f.type === "DATE" ? "DD/MM/YYYY" : "Type here"}
               value={values[f.id] || ""}
               onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))}
-              style={{ padding: 6, width: "100%", maxWidth: 300 }}
+              className="field-input"
             />
           )}
         </div>
       ))}
 
-      <label style={{ display: "flex", gap: 8, alignItems: "center", margin: "16px 0" }}>
+      <label className="sign-consent">
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
         <span>
-          I consent to sign this document electronically and understand this
-          constitutes a legally binding signature under the ECT Act.
+          {legalDisclosure || "I consent to sign this document electronically and understand that this constitutes a legally binding signature under the Electronic Communications and Transactions Act."}
         </span>
       </label>
 
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {error && <p className="form-error">{error}</p>}
 
-      <button
+      <button className="button sign-submit"
         type="button"
         disabled={!allFilled || !consent || submitting}
         onClick={submit}

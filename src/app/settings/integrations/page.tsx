@@ -1,0 +1,38 @@
+"use client";
+
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { Icon } from "@/components/Icon";
+
+type IntegrationData = {
+  baseUrl: string;
+  apiKeys: { id: string; name: string; prefix: string; createdAt: string; lastUsedAt: string | null }[];
+  webhooks: { id: string; url: string; events: string[]; enabled: boolean; secretPrefix: string }[];
+  system: { smtp: { configured: boolean; host: string | null; from: string | null }; storage: { configured: boolean; endpoint: string | null; bucket: string | null; region: string | null }; whatsapp: { configured: boolean } };
+};
+const eventOptions = ["envelope.sent", "envelope.viewed", "envelope.signed", "envelope.completed", "envelope.declined"];
+
+export default function IntegrationsPage() {
+  const [data, setData] = useState<IntegrationData | null>(null);
+  const [keyName, setKeyName] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [events, setEvents] = useState(["envelope.completed"]);
+  const [secret, setSecret] = useState<{ label: string; value: string } | null>(null);
+  const [message, setMessage] = useState("");
+  const load = useCallback(() => { fetch("/api/settings/integrations").then((response) => response.json()).then(setData); }, []);
+  useEffect(load, [load]);
+  async function createKey(event: FormEvent) { event.preventDefault(); const response = await fetch("/api/settings/integrations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "api-key", name: keyName }) }); const result = await response.json(); if (!response.ok) return setMessage(result.error); setSecret({ label: "API key", value: result.secret }); setKeyName(""); load(); }
+  async function createWebhook(event: FormEvent) { event.preventDefault(); const response = await fetch("/api/settings/integrations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "webhook", url: webhookUrl, events }) }); const result = await response.json(); if (!response.ok) return setMessage(result.error); setSecret({ label: "Webhook signing secret", value: result.secret }); setWebhookUrl(""); load(); }
+  async function remove(type: string, id: string) { if (!confirm(`Remove this ${type === "api-key" ? "API key" : "webhook"}?`)) return; await fetch(`/api/settings/integrations?type=${type}&id=${id}`, { method: "DELETE" }); load(); }
+  async function testSmtp() { setMessage("Sending test email…"); const response = await fetch("/api/settings/test-smtp", { method: "POST" }); const result = await response.json(); setMessage(response.ok ? `Test email sent to ${result.sentTo}.` : result.error); }
+  if (!data) return <div className="settings-loading">Loading integrations…</div>;
+  return (
+    <section className="settings-page">
+      <header className="settings-page-header"><div><p className="eyebrow">Developer and delivery tools</p><h2>Integrations and API</h2><p>Connect the active company to its property systems and signing notifications.</p></div><span className="settings-header-icon"><Icon name="link" size={27} /></span></header>
+      {message && <div className="notice-banner">{message}</div>}
+      {secret && <div className="secret-reveal"><div><span>{secret.label}</span><code>{secret.value}</code><small>Copy it now. BlendSign will not show it again.</small></div><button className="button button--outline" onClick={() => navigator.clipboard.writeText(secret.value)}>Copy</button></div>}
+      <div className="connection-grid"><article className="connection-card panel"><span className={`connection-dot ${data.system.storage.configured ? "is-on" : ""}`} /><div><h3>Object storage</h3><p>{data.system.storage.bucket || "Not configured"}</p><small>{data.system.storage.region || "Set S3_REGION"}</small></div><strong>{data.system.storage.configured ? "Connected" : "Action needed"}</strong></article><article className="connection-card panel"><span className={`connection-dot ${data.system.smtp.configured ? "is-on" : ""}`} /><div><h3>Email delivery</h3><p>{data.system.smtp.host || "Not configured"}</p><small>{data.system.smtp.from || "Set SMTP credentials"}</small></div>{data.system.smtp.configured ? <button className="text-button" onClick={testSmtp}>Send test</button> : <strong>Action needed</strong>}</article><article className="connection-card panel"><span className={`connection-dot ${data.system.whatsapp.configured ? "is-on" : ""}`} /><div><h3>WhatsApp Business</h3><p>{data.system.whatsapp.configured ? "Token configured" : "Optional channel"}</p><small>Email remains available without it</small></div><strong>{data.system.whatsapp.configured ? "Connected" : "Not configured"}</strong></article></div>
+      <section className="integration-section panel"><div className="integration-heading"><div><p className="eyebrow">REST API</p><h3>Company API keys</h3><p>Use Bearer authentication to access this company’s data.</p></div><div className="endpoint-box"><span>Base URL</span><code>{data.baseUrl}</code><button onClick={() => navigator.clipboard.writeText(data.baseUrl)}>Copy</button></div></div><div className="code-sample"><code>curl -H &apos;Authorization: Bearer YOUR_KEY&apos; {data.baseUrl}/health</code></div><form className="integration-create" onSubmit={createKey}><label className="field-label">Key name<input className="field-input" value={keyName} onChange={(event) => setKeyName(event.target.value)} placeholder="Stor 24 lease integration" required /></label><button className="button button--dark">Create API key</button></form><div className="integration-list">{data.apiKeys.map((key) => <div key={key.id}><div><strong>{key.name}</strong><code>{key.prefix}••••••••</code><small>Created {new Date(key.createdAt).toLocaleDateString()} · {key.lastUsedAt ? `Last used ${new Date(key.lastUsedAt).toLocaleDateString()}` : "Never used"}</small></div><button className="text-button text-button--danger" onClick={() => remove("api-key", key.id)}>Revoke</button></div>)}{data.apiKeys.length === 0 && <p className="empty-copy">No API keys have been created for this company.</p>}</div></section>
+      <section className="integration-section panel"><div className="integration-heading"><div><p className="eyebrow">Event delivery</p><h3>Webhook endpoints</h3><p>Receive signed HTTP events when envelope activity occurs.</p></div></div><form className="webhook-form" onSubmit={createWebhook}><label className="field-label">HTTPS endpoint<input className="field-input" type="url" value={webhookUrl} onChange={(event) => setWebhookUrl(event.target.value)} placeholder="https://crm.example.co.za/webhooks/blendsign" required /></label><div className="event-options">{eventOptions.map((option) => <label className="check-label" key={option}><input type="checkbox" checked={events.includes(option)} onChange={(event) => setEvents((current) => event.target.checked ? [...current, option] : current.filter((item) => item !== option))} />{option}</label>)}</div><button className="button button--dark">Add webhook</button></form><div className="integration-list">{data.webhooks.map((webhook) => <div key={webhook.id}><div><strong>{webhook.url}</strong><small>{webhook.events.join(" · ")} · Secret {webhook.secretPrefix}••••</small></div><span className={`status ${webhook.enabled ? "status--completed" : ""}`}>{webhook.enabled ? "Active" : "Paused"}</span><button className="text-button text-button--danger" onClick={() => remove("webhook", webhook.id)}>Remove</button></div>)}{data.webhooks.length === 0 && <p className="empty-copy">No webhook endpoints configured.</p>}</div></section>
+    </section>
+  );
+}

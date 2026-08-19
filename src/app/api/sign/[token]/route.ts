@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { enqueueSealDocument, enqueueSendSigningLink } from "@/lib/queue";
+import { enqueueSealDocument, enqueueSendSigningLink, enqueueWebhookEvent } from "@/lib/queue";
 
 const submitSchema = z.object({
-  fields: z.array(z.object({ fieldId: z.string(), value: z.string() })),
+  fields: z.array(z.object({ fieldId: z.string(), value: z.string().max(2_000_000) })).max(100),
   consent: z.literal(true), // explicit consent to sign electronically, required
 });
 
@@ -42,6 +42,7 @@ export async function GET(
         userAgent: _req.headers.get("user-agent") || undefined,
       },
     });
+    await enqueueWebhookEvent(signer.envelopeId, "envelope.viewed");
   }
 
   return NextResponse.json({ signer });
@@ -70,6 +71,13 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const permittedFields = await prisma.field.count({
+    where: { signerId: signer.id, id: { in: parsed.data.fields.map((field) => field.fieldId) } },
+  });
+  if (permittedFields !== parsed.data.fields.length) {
+    return NextResponse.json({ error: "One or more signing fields are invalid." }, { status: 400 });
+  }
+
   await Promise.all(
     parsed.data.fields.map((f) =>
       prisma.field.update({ where: { id: f.fieldId }, data: { value: f.value } })
@@ -91,6 +99,7 @@ export async function POST(
       metadata: { consent: true },
     },
   });
+  await enqueueWebhookEvent(signer.envelopeId, "envelope.signed");
 
   const allSigners = await prisma.signer.findMany({
     where: { envelopeId: signer.envelopeId },
