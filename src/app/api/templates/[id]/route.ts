@@ -27,7 +27,9 @@ const fieldSchema = z.object({
   }
 });
 
-const apiIdentifierSchema = z.string().trim().min(3).max(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lower-case letters, numbers and hyphens only.");
+const apiIdentifierSchema = z.string().trim().min(3).max(80)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lower-case letters, numbers and hyphens only.")
+  .refine((value) => !/^bs[-_]live[-_]/i.test(value), "Use a public template identifier such as stor24-unit-lease, not a company API secret.");
 
 const updateSchema = z.object({
   name: z.string().min(2).max(120),
@@ -60,12 +62,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   if (new Set(data.roles.map((role) => role.name.trim().toLowerCase())).size !== data.roles.length) {
     return NextResponse.json({ error: "Signer role names must be unique." }, { status: 400 });
   }
-  if (existing.apiIdentifier && existing.apiIdentifier !== data.apiIdentifier) {
-    return NextResponse.json({ error: "A template API key is permanent after it has been saved." }, { status: 409 });
+  if (existing.apiIdentifier && existing.apiIdentifier !== data.apiIdentifier && !canAdminister(context)) {
+    return NextResponse.json({ error: "Administrator access is required to change a template identifier." }, { status: 403 });
   }
   const duplicate = await prisma.template.findFirst({ where: { orgId: context.org.id, apiIdentifier: data.apiIdentifier, id: { not: existing.id } } });
   if (duplicate) {
-    return NextResponse.json({ error: "That template API key is already in use for this company." }, { status: 409 });
+    return NextResponse.json({ error: "That template identifier is already in use for this company." }, { status: 409 });
   }
 
   const template = await prisma.$transaction(async (tx) => {

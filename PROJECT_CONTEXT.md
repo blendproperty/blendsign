@@ -411,11 +411,11 @@ The current branch adds the foundation required for Stor24 document automation.
 
 Each template can now store:
 
-- `apiIdentifier`, a permanent company-scoped key such as `stor24-unit-lease`.
+- `apiIdentifier`, a public company-scoped template identifier such as `stor24-unit-lease`.
 - `version`, an integer revision number starting at 1.
 - `active`, which controls whether new requests may use the template.
 
-`apiIdentifier` is nullable in the database so legacy templates continue working after deployment. Creating a new template requires it. Editing a legacy template requires assigning it once. After assignment it cannot be changed.
+`apiIdentifier` is nullable in the database so legacy templates continue working after deployment. Creating a new template requires it. Editing a legacy template requires assigning it once. Company administrators may correct an existing identifier, with an explicit warning that the old API URL will stop working. Values resembling private `bs_live_` company API secrets are rejected.
 
 The same identifier may exist in different companies, but cannot be duplicated within one company.
 

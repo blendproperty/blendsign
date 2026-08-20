@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getRequestContext } from "@/lib/account";
+import { canAdminister, getRequestContext } from "@/lib/account";
 import { prisma } from "@/lib/prisma";
 import TemplateEditor from "@/components/TemplateEditor";
 
@@ -22,6 +22,7 @@ export default async function EditTemplatePage({ params }: { params: { id: strin
     apiIdentifier: template.apiIdentifier || "",
     version: template.version,
     active: template.active,
+    canEditIdentifier: canAdminister(context),
     documentUrl: `/api/templates/${template.id}/document`,
     roles: template.roles.map(({ name, order }) => ({ name, order })),
     fields: template.fields.map(({ id, roleId, type, label, dataKey, defaultValue, required, editableBySigner, page, x, y, width, height }) => ({

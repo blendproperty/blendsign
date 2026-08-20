@@ -32,6 +32,7 @@ type InitialTemplate = {
   apiIdentifier: string;
   version: number;
   active: boolean;
+  canEditIdentifier: boolean;
   documentUrl: string;
   roles: Role[];
   fields: PlacedField[];
@@ -219,7 +220,9 @@ export default function TemplateEditor({ initial }: { initial?: InitialTemplate 
   }
 
   async function save() {
-    if (!documentSource || !name.trim() || !apiIdentifier.trim() || !fields.length || roles.some((role) => !role.name.trim())) return setError("Add a name, template key, PDF, signer roles and at least one field.");
+    if (!documentSource || !name.trim() || !apiIdentifier.trim() || !fields.length || roles.some((role) => !role.name.trim())) return setError("Add a name, template identifier, PDF, signer roles and at least one field.");
+    if (/^bs[-_]live[-_]/i.test(apiIdentifier)) return setError("Use a public template identifier such as stor24-unit-lease. Do not paste a company API secret here.");
+    if (initial?.apiIdentifier && initial.apiIdentifier !== apiIdentifier && !window.confirm(`Change the template identifier from ${initial.apiIdentifier} to ${apiIdentifier}? The old API URL will stop working.`)) return;
     setBusy(true); setError(null);
     try {
       let originalKey: string | undefined;
@@ -244,7 +247,7 @@ export default function TemplateEditor({ initial }: { initial?: InitialTemplate 
       <div className="template-builder-layout">
         <aside className="panel template-builder-sidebar">
           <label className="field-label">Template name<input className="field-input" value={name} onChange={(event) => { const value = event.target.value; setName(value); if (!identifierEdited) setApiIdentifier(toApiIdentifier(value)); }} placeholder="Stor24 unit lease" /></label>
-          <label className="field-label">Template API key<input className="field-input template-api-key" value={apiIdentifier} readOnly={Boolean(initial?.apiIdentifier)} onChange={(event) => { setIdentifierEdited(true); setApiIdentifier(toApiIdentifier(event.target.value)); }} placeholder="stor24-unit-lease" /><span>{initial?.apiIdentifier ? "Permanent company-scoped identifier" : "Used by external systems, for example stor24-unit-lease"}</span></label>
+          <label className="field-label">Template identifier<input className="field-input template-api-key" value={apiIdentifier} readOnly={Boolean(initial && !initial.canEditIdentifier)} onChange={(event) => { setIdentifierEdited(true); setApiIdentifier(toApiIdentifier(event.target.value)); }} placeholder="stor24-unit-lease" /><span>Public document name used in API URLs. Example: stor24-unit-lease. Never paste a company API secret here.</span></label>
           <label className="field-label">Description<textarea className="field-input field-textarea template-description" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Approved reusable agreement" /></label>
           <label className="template-availability"><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} /><span><strong>Template active</strong><small>{initial ? `Revision ${initial.version}. Saving creates revision ${initial.version + 1}.` : "Available to create signing requests after it is saved."}</small></span></label>
           <label className={`upload-zone template-upload ${documentSource ? "has-file" : ""}`}><input type="file" accept="application/pdf" onChange={(event) => { choosePdf(event.target.files?.[0] || null); event.currentTarget.value = ""; }} /><Icon name={documentSource ? "file" : "upload"} size={24} /><strong>{file?.name || (initial ? "Replace template PDF" : "Choose template PDF")}</strong>{initial && !file && <small>Current PDF and placements loaded</small>}</label>
