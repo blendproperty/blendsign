@@ -516,9 +516,29 @@ Implemented versioned endpoints:
 ```text
 GET /api/v1/health
 GET /api/v1/envelopes
+GET /api/v1/templates
+GET /api/v1/templates/[templateKey]
 ```
 
 `GET /api/v1/envelopes` returns up to 100 non-deleted envelopes for the API key's organisation.
+
+`GET /api/v1/templates` lists API-configured templates belonging to the API key's organisation. It returns status, revision and field counts without exposing PDF object-storage keys.
+
+`GET /api/v1/templates/[templateKey]` returns the selected template's roles, signing order, field labels, data keys, types, defaults, required status, signer-editability, page references and repeated-key occurrence counts. It does not return another organisation's template even when the caller knows its key.
+
+Example discovery requests:
+
+```bash
+curl -sS \
+  -H 'Authorization: Bearer YOUR_STOR24_API_KEY' \
+  https://blendsign.srv938083.hstgr.cloud/api/v1/templates
+
+curl -sS \
+  -H 'Authorization: Bearer YOUR_STOR24_API_KEY' \
+  https://blendsign.srv938083.hstgr.cloud/api/v1/templates/stor24-unit-lease
+```
+
+Never place a real API key in source control, screenshots or chat transcripts.
 
 The API currently does not create an envelope from a template. Do not claim that Stor24 automation is complete until the endpoint in section 17 is implemented and tested.
 

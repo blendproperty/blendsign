@@ -67,7 +67,18 @@ curl -H 'Authorization: Bearer bs_live_YOUR_KEY' \
 
 curl -H 'Authorization: Bearer bs_live_YOUR_KEY' \
   https://sign.example.co.za/api/v1/envelopes
+
+curl -H 'Authorization: Bearer bs_live_YOUR_KEY' \
+  https://sign.example.co.za/api/v1/templates
+
+curl -H 'Authorization: Bearer bs_live_YOUR_KEY' \
+  https://sign.example.co.za/api/v1/templates/stor24-unit-lease
 ```
+
+Template discovery returns only templates owned by the API key's company.
+The detail endpoint exposes the configured roles, field labels, merge data
+keys, defaults, requirements and page occurrences without exposing private
+PDF storage keys.
 
 Webhook requests include `x-blendsign-event` and an
 `x-blendsign-signature: sha256=...` HMAC header. Webhook secrets are
