@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import SignatureCanvas from "@/components/SignatureCanvas";
+import SignatureCapture from "@/components/SignatureCapture";
 
 type Field = {
   id: string;
@@ -18,11 +18,13 @@ export default function SignClient({
   fields,
   documentTitle,
   legalDisclosure,
+  signerName,
 }: {
   token: string;
   fields: Field[];
   documentTitle: string;
   legalDisclosure?: string;
+  signerName: string;
 }) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [consent, setConsent] = useState(false);
@@ -112,9 +114,8 @@ export default function SignClient({
                 </div>
               </div>
             ) : (
-              <SignatureCanvas
-                width={type === "INITIALS" ? 360 : 680}
-                height={type === "INITIALS" ? 170 : 230}
+              <SignatureCapture
+                signerName={signerName}
                 label={type === "INITIALS" ? "initials" : "signature"}
                 onCapture={(dataUrl) => applyCapture(captureFields, dataUrl)}
               />

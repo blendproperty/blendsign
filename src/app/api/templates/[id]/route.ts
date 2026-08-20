@@ -37,6 +37,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   if (data.fields.some((field) => field.roleIndex >= data.roles.length)) {
     return NextResponse.json({ error: "A field has an invalid signer role." }, { status: 400 });
   }
+  if (data.fields.some((field) => field.x + field.width > 1.000001 || field.y + field.height > 1.000001)) {
+    return NextResponse.json({ error: "A signing field extends beyond the PDF page." }, { status: 400 });
+  }
   if (new Set(data.roles.map((role) => role.name.trim().toLowerCase())).size !== data.roles.length) {
     return NextResponse.json({ error: "Signer role names must be unique." }, { status: 400 });
   }

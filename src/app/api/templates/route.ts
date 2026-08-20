@@ -37,6 +37,9 @@ export async function POST(request: NextRequest) {
   if (data.fields.some((field) => field.roleIndex >= data.roles.length)) {
     return NextResponse.json({ error: "A field has an invalid signer role." }, { status: 400 });
   }
+  if (data.fields.some((field) => field.x + field.width > 1.000001 || field.y + field.height > 1.000001)) {
+    return NextResponse.json({ error: "A signing field extends beyond the PDF page." }, { status: 400 });
+  }
 
   const template = await prisma.template.create({
     data: {

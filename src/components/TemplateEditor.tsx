@@ -28,6 +28,7 @@ type InitialTemplate = {
   roles: Role[];
   fields: PlacedField[];
 };
+type ResizeDirection = "nw" | "ne" | "sw" | "se";
 
 const fieldTypes: { type: FieldType; label: string }[] = [
   { type: "SIGNATURE", label: "Signature" },
@@ -59,6 +60,17 @@ export default function TemplateEditor({ initial }: { initial?: InitialTemplate 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const drag = useRef<{ id: string; startX: number; startY: number; fieldX: number; fieldY: number; rect: DOMRect } | null>(null);
+  const resize = useRef<{
+    id: string;
+    direction: ResizeDirection;
+    startX: number;
+    startY: number;
+    fieldX: number;
+    fieldY: number;
+    fieldWidth: number;
+    fieldHeight: number;
+    rect: DOMRect;
+  } | null>(null);
   const selected = useMemo(() => fields.find((field) => field.id === selectedId) || null, [fields, selectedId]);
   const documentSource = file || initial?.documentUrl || null;
 
@@ -90,6 +102,62 @@ export default function TemplateEditor({ initial }: { initial?: InitialTemplate 
       const y = Math.max(0, Math.min(1 - field.height, current.fieldY + (event.clientY - current.startY) / current.rect.height));
       return { ...field, x, y };
     }));
+  }
+
+  function startResize(event: React.PointerEvent<HTMLSpanElement>, field: PlacedField, direction: ResizeDirection) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const rect = event.currentTarget.closest(".template-pdf-page")!.getBoundingClientRect();
+    resize.current = {
+      id: field.id,
+      direction,
+      startX: event.clientX,
+      startY: event.clientY,
+      fieldX: field.x,
+      fieldY: field.y,
+      fieldWidth: field.width,
+      fieldHeight: field.height,
+      rect,
+    };
+    setSelectedId(field.id);
+  }
+
+  function moveResize(event: React.PointerEvent<HTMLSpanElement>) {
+    const current = resize.current;
+    if (!current) return;
+    const dx = (event.clientX - current.startX) / current.rect.width;
+    const dy = (event.clientY - current.startY) / current.rect.height;
+    const fromLeft = current.direction.includes("w");
+    const fromTop = current.direction.includes("n");
+    const minimumWidth = 0.035;
+    const minimumHeight = 0.025;
+
+    let x = fromLeft ? current.fieldX + dx : current.fieldX;
+    let y = fromTop ? current.fieldY + dy : current.fieldY;
+    let width = fromLeft ? current.fieldWidth - dx : current.fieldWidth + dx;
+    let height = fromTop ? current.fieldHeight - dy : current.fieldHeight + dy;
+
+    if (width < minimumWidth) {
+      if (fromLeft) x -= minimumWidth - width;
+      width = minimumWidth;
+    }
+    if (height < minimumHeight) {
+      if (fromTop) y -= minimumHeight - height;
+      height = minimumHeight;
+    }
+
+    x = Math.max(0, x);
+    y = Math.max(0, y);
+    width = Math.min(width, 1 - x);
+    height = Math.min(height, 1 - y);
+
+    setFields((items) => items.map((field) => field.id === current.id ? { ...field, x, y, width, height } : field));
+  }
+
+  function stopResize(event: React.PointerEvent<HTMLSpanElement>) {
+    resize.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
   function updateSelected(patch: Partial<PlacedField>) {
@@ -138,7 +206,7 @@ export default function TemplateEditor({ initial }: { initial?: InitialTemplate 
 
   return (
     <div className="page template-editor-page">
-      <section className="page-heading page-heading--row"><div><p className="eyebrow">Template builder</p><h1>{initial ? "Edit reusable template" : "Prepare reusable fields"}</h1><p>Add signer roles, choose a field, then click the exact position on the PDF. Drag a field to adjust it.</p></div><Link href="/templates" className="button button--quiet">Cancel</Link></section>
+      <section className="page-heading page-heading--row"><div><p className="eyebrow">Template builder</p><h1>{initial ? "Edit reusable template" : "Prepare reusable fields"}</h1><p>Add signer roles, choose a field, then click the exact position on the PDF. Drag to move it and use the corner handles to resize it.</p></div><Link href="/templates" className="button button--quiet">Cancel</Link></section>
       <div className="template-builder-layout">
         <aside className="panel template-builder-sidebar">
           <label className="field-label">Template name<input className="field-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="Stor24 unit lease" /></label>
@@ -146,12 +214,12 @@ export default function TemplateEditor({ initial }: { initial?: InitialTemplate 
           <label className={`upload-zone template-upload ${documentSource ? "has-file" : ""}`}><input type="file" accept="application/pdf" onChange={(event) => { choosePdf(event.target.files?.[0] || null); event.currentTarget.value = ""; }} /><Icon name={documentSource ? "file" : "upload"} size={24} /><strong>{file?.name || (initial ? "Replace template PDF" : "Choose template PDF")}</strong>{initial && !file && <small>Current PDF and placements loaded</small>}</label>
           <div className="builder-section"><div className="builder-section-title"><h3>Signer roles</h3><button type="button" className="text-button" onClick={() => setRoles((items) => [...items, { name: `Signer ${items.length + 1}`, order: items.length }])}>+ Add</button></div>{roles.map((role, index) => <div className={`role-editor ${activeRole === index ? "is-active" : ""}`} key={index} onClick={() => setActiveRole(index)}><span style={{ background: roleColours[index % roleColours.length] }} /><input value={role.name} aria-label={`Signer role ${index + 1}`} onChange={(event) => setRoles((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} /><input type="number" min="0" value={role.order} title="Signing order" onChange={(event) => setRoles((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, order: Number(event.target.value) } : item))} /><button type="button" className="role-remove" aria-label={`Remove ${role.name}`} onClick={(event) => { event.stopPropagation(); removeRole(index); }}>×</button></div>)}</div>
           <div className="builder-section"><h3>Field to place</h3><div className="field-tool-grid">{fieldTypes.map((item) => <button type="button" className={activeType === item.type ? "is-active" : ""} key={item.type} onClick={() => setActiveType(item.type)}>{item.label}</button>)}</div></div>
-          {selected && <div className="builder-section selected-field-panel"><div className="builder-section-title"><h3>Selected field</h3><button type="button" className="text-button text-button--danger" onClick={() => { setFields((items) => items.filter((field) => field.id !== selected.id)); setSelectedId(null); }}>Delete</button></div><p>{selected.type.toLowerCase()} for {roles[selected.roleIndex]?.name}</p><label className="field-label">Assigned role<select className="field-input" value={selected.roleIndex} onChange={(event) => updateSelected({ roleIndex: Number(event.target.value) })}>{roles.map((role, index) => <option value={index} key={index}>{role.name}</option>)}</select></label><div className="selected-field-grid"><label>Page<input type="number" min="1" max={numPages} value={selected.page} onChange={(event) => updateSelected({ page: Number(event.target.value) })} /></label><label>Width %<input type="number" min="2" max="100" value={Math.round(selected.width * 100)} onChange={(event) => updateSelected({ width: Number(event.target.value) / 100 })} /></label><label>Height %<input type="number" min="2" max="100" value={Math.round(selected.height * 100)} onChange={(event) => updateSelected({ height: Number(event.target.value) / 100 })} /></label></div></div>}
+          {selected && <div className="builder-section selected-field-panel"><div className="builder-section-title"><h3>Selected field</h3><button type="button" className="text-button text-button--danger" onClick={() => { setFields((items) => items.filter((field) => field.id !== selected.id)); setSelectedId(null); }}>Delete</button></div><p>{selected.type.toLowerCase()} for {roles[selected.roleIndex]?.name}</p><div className="resize-hint">Drag a corner handle on the PDF to resize this box.</div><label className="field-label">Assigned role<select className="field-input" value={selected.roleIndex} onChange={(event) => updateSelected({ roleIndex: Number(event.target.value) })}>{roles.map((role, index) => <option value={index} key={index}>{role.name}</option>)}</select></label><div className="selected-field-grid"><label>Page<input type="number" min="1" max={numPages} value={selected.page} onChange={(event) => updateSelected({ page: Number(event.target.value) })} /></label><label>Width %<input type="number" min="2" max="100" value={Math.round(selected.width * 100)} onChange={(event) => updateSelected({ width: Math.min(1 - selected.x, Math.max(0.02, Number(event.target.value) / 100)) })} /></label><label>Height %<input type="number" min="2" max="100" value={Math.round(selected.height * 100)} onChange={(event) => updateSelected({ height: Math.min(1 - selected.y, Math.max(0.02, Number(event.target.value) / 100)) })} /></label></div></div>}
           {error && <div className="form-error">{error}</div>}
           <button className="button button--accent button--full" type="button" disabled={busy} onClick={save}>{busy ? "Saving…" : initial ? "Update template" : "Save template"}</button>
         </aside>
         <section className="template-document-workspace">
-          {!documentSource ? <div className="panel template-editor-empty"><Icon name="file" size={42} /><h2>Select a PDF to begin</h2><p>The document pages and field placement canvas will appear here.</p></div> : <Document file={documentSource} onLoadSuccess={({ numPages: pages }) => setNumPages(pages)} loading={<div className="panel template-editor-empty">Loading PDF…</div>}>{Array.from({ length: numPages }, (_, pageIndex) => { const page = pageIndex + 1; return <div className="template-page-wrap" key={page}><div className="template-page-number">Page {page}</div><div className="template-pdf-page" onClick={(event) => placeField(event, page)}><Page pageNumber={page} width={720} renderAnnotationLayer={false} renderTextLayer={false} /><div className="template-field-layer">{fields.filter((field) => field.page === page).map((field) => <button key={field.id} type="button" className={`placed-template-field ${selectedId === field.id ? "is-selected" : ""}`} style={{ left: `${field.x * 100}%`, top: `${field.y * 100}%`, width: `${field.width * 100}%`, height: `${field.height * 100}%`, borderColor: roleColours[field.roleIndex % roleColours.length], background: `${roleColours[field.roleIndex % roleColours.length]}22` }} onClick={(event) => event.stopPropagation()} onPointerDown={(event) => startDrag(event, field)} onPointerMove={moveDrag} onPointerUp={() => { drag.current = null; }}>{field.type.toLowerCase()}<small>{roles[field.roleIndex]?.name}</small></button>)}</div></div></div>; })}</Document>}
+          {!documentSource ? <div className="panel template-editor-empty"><Icon name="file" size={42} /><h2>Select a PDF to begin</h2><p>The document pages and field placement canvas will appear here.</p></div> : <Document file={documentSource} onLoadSuccess={({ numPages: pages }) => setNumPages(pages)} loading={<div className="panel template-editor-empty">Loading PDF…</div>}>{Array.from({ length: numPages }, (_, pageIndex) => { const page = pageIndex + 1; return <div className="template-page-wrap" key={page}><div className="template-page-number">Page {page}</div><div className="template-pdf-page" onClick={(event) => placeField(event, page)}><Page pageNumber={page} width={720} renderAnnotationLayer={false} renderTextLayer={false} /><div className="template-field-layer">{fields.filter((field) => field.page === page).map((field) => <button key={field.id} type="button" className={`placed-template-field ${selectedId === field.id ? "is-selected" : ""}`} style={{ left: `${field.x * 100}%`, top: `${field.y * 100}%`, width: `${field.width * 100}%`, height: `${field.height * 100}%`, borderColor: roleColours[field.roleIndex % roleColours.length], background: `${roleColours[field.roleIndex % roleColours.length]}22` }} onClick={(event) => event.stopPropagation()} onPointerDown={(event) => startDrag(event, field)} onPointerMove={moveDrag} onPointerUp={() => { drag.current = null; }}>{field.type.toLowerCase()}<small>{roles[field.roleIndex]?.name}</small>{selectedId === field.id && (["nw", "ne", "sw", "se"] as ResizeDirection[]).map((direction) => <span key={direction} className={`field-resize-handle field-resize-handle--${direction}`} aria-hidden="true" onPointerDown={(event) => startResize(event, field, direction)} onPointerMove={moveResize} onPointerUp={stopResize} onPointerCancel={stopResize} />)}</button>)}</div></div></div>; })}</Document>}
         </section>
       </div>
     </div>
