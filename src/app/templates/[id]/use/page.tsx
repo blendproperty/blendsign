@@ -9,7 +9,7 @@ export default async function UseTemplatePage({ params }: { params: { id: string
   const context = await getRequestContext();
   if (!context) redirect("/login");
   const template = await prisma.template.findFirst({
-    where: { id: params.id, orgId: context.org.id },
+    where: { id: params.id, orgId: context.org.id, active: true },
     include: { roles: { orderBy: { order: "asc" } } },
   });
   if (!template) notFound();

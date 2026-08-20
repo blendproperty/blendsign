@@ -8,11 +8,13 @@ export const dynamic = "force-dynamic";
 export default async function EditSignFormPage({ params }: { params: { id: string } }) {
   const context = await getRequestContext();
   if (!context) redirect("/login");
-  const [signForm, templates] = await Promise.all([
-    prisma.signForm.findFirst({ where: { id: params.id, orgId: context.org.id } }),
-    prisma.template.findMany({ where: { orgId: context.org.id }, orderBy: { name: "asc" }, include: { _count: { select: { roles: true, fields: true } } } }),
-  ]);
+  const signForm = await prisma.signForm.findFirst({ where: { id: params.id, orgId: context.org.id } });
   if (!signForm) notFound();
+  const templates = await prisma.template.findMany({
+    where: { orgId: context.org.id, OR: [{ active: true }, { id: signForm.templateId }] },
+    orderBy: { name: "asc" },
+    include: { _count: { select: { roles: true, fields: true } } },
+  });
 
   return <NewSignForm
     templates={templates.map((template) => ({ id: template.id, name: template.name, roles: template._count.roles, fields: template._count.fields }))}

@@ -20,6 +20,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     include: { roles: { include: { fields: true }, orderBy: { order: "asc" } } },
   });
   if (!template) return NextResponse.json({ error: "Template not found." }, { status: 404 });
+  if (!template.active) {
+    return NextResponse.json({ error: "Activate this template before use." }, { status: 409 });
+  }
   const roleIds = new Set(template.roles.map((role) => role.id));
   const recipientRoleIds = new Set(parsed.data.recipients.map((recipient) => recipient.roleId));
   if (parsed.data.recipients.length !== template.roles.length || recipientRoleIds.size !== roleIds.size || parsed.data.recipients.some((recipient) => !roleIds.has(recipient.roleId))) {

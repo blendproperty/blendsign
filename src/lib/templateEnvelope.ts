@@ -37,7 +37,7 @@ export async function createEnvelopeFromTemplate({
       title: title?.trim() || template.name,
       originalKey,
       status: "SENT",
-      auditEvents: { create: { eventType: "created", metadata: { templateId: template.id } } },
+      auditEvents: { create: { eventType: "created", metadata: { templateId: template.id, templateKey: template.apiIdentifier, templateVersion: template.version } } },
     },
   });
 
@@ -66,11 +66,16 @@ export async function createEnvelopeFromTemplate({
       envelopeId: envelope.id,
       signerId: signerByRole.get(role.id)!,
       type: field.type,
+      label: field.label,
+      dataKey: field.dataKey,
+      required: field.required,
+      editableBySigner: field.editableBySigner,
       page: field.page,
       x: field.x,
       y: field.y,
       width: field.width,
       height: field.height,
+      value: field.defaultValue,
     }))
   );
   if (fields.length) await prisma.field.createMany({ data: fields });

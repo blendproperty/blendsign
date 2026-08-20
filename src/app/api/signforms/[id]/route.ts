@@ -21,6 +21,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const template = await prisma.template.findFirst({ where: { id: parsed.data.templateId, orgId: context.org.id } });
   if (!template) return NextResponse.json({ error: "Template not found." }, { status: 404 });
+  if (parsed.data.active && !template.active) {
+    return NextResponse.json({ error: "An active SignForm requires an active template." }, { status: 409 });
+  }
   const duplicate = await prisma.signForm.findFirst({ where: { slug: parsed.data.slug, id: { not: signForm.id } } });
   if (duplicate) return NextResponse.json({ error: "That public link is already in use." }, { status: 409 });
 

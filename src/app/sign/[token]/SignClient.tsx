@@ -6,6 +6,10 @@ import SignatureCapture from "@/components/SignatureCapture";
 type Field = {
   id: string;
   type: "SIGNATURE" | "INITIALS" | "DATE" | "TEXT" | "CHECKBOX";
+  label: string | null;
+  required: boolean;
+  editableBySigner: boolean;
+  value: string | null;
   page: number;
   x: number;
   y: number;
@@ -26,7 +30,7 @@ export default function SignClient({
   legalDisclosure?: string;
   signerName: string;
 }) {
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.filter((field) => field.value).map((field) => [field.id, field.value!])))
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -36,7 +40,7 @@ export default function SignClient({
     new Set(fields.filter((field) => field.type === "SIGNATURE" || field.type === "INITIALS").map((field) => field.type))
   ).map((type) => ({ type, fields: fields.filter((field) => field.type === type) }));
   const otherFields = fields.filter((field) => field.type !== "SIGNATURE" && field.type !== "INITIALS");
-  const allFilled = fields.every((f) => values[f.id]);
+  const allFilled = fields.every((field) => !field.required || values[field.id]);
 
   function applyCapture(captureFields: Field[], value: string) {
     setValues((current) => ({
@@ -103,7 +107,7 @@ export default function SignClient({
         return (
           <div className="sign-field sign-field--reusable" key={type}>
             <div className="sign-field-label">
-              <span>{label}</span><small>{placementCopy}</small>
+            <span>{captureFields[0].label || label}{captureFields.every((field) => !field.required) ? " (optional)" : ""}</span><small>{placementCopy}</small>
             </div>
             {value ? (
               <div className="captured-signature">
@@ -127,13 +131,14 @@ export default function SignClient({
       {otherFields.map((f) => (
         <div className="sign-field" key={f.id}>
           <div className="sign-field-label">
-            <span>{f.type.toLowerCase()}</span><small>Page {f.page}</small>
+            <span>{f.label || f.type.toLowerCase()}{f.required ? "" : " (optional)"}</span><small>Page {f.page}</small>
           </div>
           {f.type === "CHECKBOX" ? (
             <label className="sign-checkbox-field">
               <input
                 type="checkbox"
                 checked={values[f.id] === "X"}
+                disabled={!f.editableBySigner}
                 onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.checked ? "X" : "" }))}
               />
               <span>Tick to confirm</span>
@@ -143,6 +148,7 @@ export default function SignClient({
               type={f.type === "DATE" ? "date" : "text"}
               placeholder="Type here"
               value={values[f.id] || ""}
+              readOnly={!f.editableBySigner}
               onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))}
               className="field-input"
             />

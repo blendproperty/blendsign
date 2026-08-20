@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const template = await prisma.template.findFirst({ where: { id: parsed.data.templateId, orgId: context.org.id } });
+  const template = await prisma.template.findFirst({ where: { id: parsed.data.templateId, orgId: context.org.id, active: true } });
   if (!template) return NextResponse.json({ error: "Template not found." }, { status: 404 });
   const existing = await prisma.signForm.findUnique({ where: { slug: parsed.data.slug } });
   if (existing) return NextResponse.json({ error: "That public link is already in use." }, { status: 409 });

@@ -16,7 +16,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       template: { include: { roles: { include: { fields: true }, orderBy: { order: "asc" } } } },
     },
   });
-  if (!signForm || !signForm.active) return NextResponse.json({ error: "SignForm not found." }, { status: 404 });
+  if (!signForm || !signForm.active || !signForm.template.active) return NextResponse.json({ error: "SignForm not found." }, { status: 404 });
   const roleIds = new Set(signForm.template.roles.map((role) => role.id));
   const recipientRoleIds = new Set(parsed.data.recipients.map((recipient) => recipient.roleId));
   if (parsed.data.recipients.length !== roleIds.size || recipientRoleIds.size !== roleIds.size || parsed.data.recipients.some((recipient) => !roleIds.has(recipient.roleId))) {

@@ -73,15 +73,18 @@ export async function POST(
 
   const assignedFields = await prisma.field.findMany({
     where: { signerId: signer.id },
-    select: { id: true },
+    select: { id: true, required: true, editableBySigner: true, value: true },
   });
-  const submittedIds = new Set(parsed.data.fields.map((field) => field.fieldId));
-  if (
-    parsed.data.fields.length !== assignedFields.length ||
-    submittedIds.size !== assignedFields.length ||
-    assignedFields.some((field) => !submittedIds.has(field.id))
-  ) {
+  const assignedById = new Map(assignedFields.map((field) => [field.id, field]));
+  const submittedById = new Map(parsed.data.fields.map((field) => [field.fieldId, field.value]));
+  if (submittedById.size !== parsed.data.fields.length || parsed.data.fields.some((field) => !assignedById.has(field.fieldId))) {
+    return NextResponse.json({ error: "A submitted field does not belong to this signer." }, { status: 400 });
+  }
+  if (assignedFields.some((field) => field.required && !(submittedById.get(field.id) || field.value))) {
     return NextResponse.json({ error: "Complete every signing field before submitting." }, { status: 400 });
+  }
+  if (assignedFields.some((field) => !field.editableBySigner && submittedById.has(field.id) && submittedById.get(field.id) !== field.value)) {
+    return NextResponse.json({ error: "A pre-filled field cannot be changed." }, { status: 400 });
   }
 
   await Promise.all(

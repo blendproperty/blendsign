@@ -555,17 +555,29 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .template-card-icon, .signform-card-icon { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: var(--brand-accent-soft); color: var(--brand-accent-dark); }
 .template-card h2, .signform-card h2 { margin: 0 0 6px; font-size: 20px; }
 .template-card p:not(.eyebrow), .signform-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
-.template-card dl { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; padding: 15px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.template-title-line { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.template-api-identifier { display: block; width: fit-content; max-width: 100%; margin-top: 10px; padding: 5px 7px; overflow: hidden; border-radius: 5px; background: #f4f2ed; color: #625f58; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.template-card--inactive { background: #faf9f6; }
+.template-card--inactive .template-card-icon { filter: grayscale(1); opacity: .6; }
+.template-card dl { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; padding: 15px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .template-card dl div { padding: 0 14px; border-right: 1px solid var(--line); }
 .template-card dl div:last-child { border-right: 0; }
 .template-card dt { color: var(--muted); font-size: 9px; text-transform: uppercase; }
 .template-card dd { margin: 6px 0 0; font-size: 18px; font-weight: 700; }
 .template-card-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 9px; }
+.button--disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
 .template-delete { margin-right: auto; padding: 0 8px; }
 .template-delete:disabled { opacity: .5; cursor: wait; }
 .template-builder-layout { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 20px; align-items: start; }
 .template-builder-sidebar { position: sticky; top: 92px; display: grid; gap: 16px; padding: 20px; max-height: calc(100vh - 112px); overflow-y: auto; }
 .template-description { min-height: 86px; }
+.template-api-key { font-family: "Geist Mono", monospace; font-size: 11px; }
+.template-api-key:read-only { background: #f4f2ed; color: #67635c; }
+.template-availability { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #faf9f6; cursor: pointer; }
+.template-availability input { margin-top: 2px; accent-color: var(--brand-accent-dark); }
+.template-availability span { display: grid; gap: 4px; }
+.template-availability strong { font-size: 11px; }
+.template-availability small { color: var(--muted); font-size: 9px; line-height: 1.4; }
 .template-upload { min-height: 105px; padding: 16px; }
 .template-upload strong { font-size: 11px; }
 .builder-section { display: grid; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
@@ -581,6 +593,10 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .field-tool-grid button { min-height: 34px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font-size: 10px; cursor: pointer; }
 .field-tool-grid button.is-active { border-color: var(--brand-accent); background: var(--brand-accent-soft); color: var(--brand-accent-dark); font-weight: 700; }
 .selected-field-panel > p { margin: 0; color: var(--muted); font-size: 10px; text-transform: capitalize; }
+.field-binding-note { padding: 9px 10px; border: 1px dashed var(--line); border-radius: 7px; background: #faf9f6; line-height: 1.45; text-transform: none !important; }
+.field-option-list { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 7px; }
+.field-option-list label { display: flex; align-items: center; gap: 8px; color: #514e48; font-size: 10px; cursor: pointer; }
+.field-option-list input { accent-color: var(--brand-accent-dark); }
 .resize-hint { padding: 9px 10px; border-radius: 7px; background: var(--brand-accent-soft); color: var(--brand-accent-dark); font-size: 9px; line-height: 1.45; }
 .selected-field-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .selected-field-grid label { display: grid; gap: 4px; color: var(--muted); font-size: 8px; }
