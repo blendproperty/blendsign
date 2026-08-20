@@ -561,6 +561,8 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .template-card dt { color: var(--muted); font-size: 9px; text-transform: uppercase; }
 .template-card dd { margin: 6px 0 0; font-size: 18px; font-weight: 700; }
 .template-card-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 9px; }
+.template-delete { margin-right: auto; padding: 0 8px; }
+.template-delete:disabled { opacity: .5; cursor: wait; }
 .template-builder-layout { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 20px; align-items: start; }
 .template-builder-sidebar { position: sticky; top: 92px; display: grid; gap: 16px; padding: 20px; max-height: calc(100vh - 112px); overflow-y: auto; }
 .template-description { min-height: 86px; }

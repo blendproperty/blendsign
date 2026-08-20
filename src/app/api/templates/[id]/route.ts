@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import type { TemplateRole } from "@prisma/client";
-import { getRequestContext } from "@/lib/account";
+import { canAdminister, getRequestContext } from "@/lib/account";
 import { prisma } from "@/lib/prisma";
+import { deleteObject } from "@/lib/storage";
 
 const fieldSchema = z.object({
   roleIndex: z.number().int().min(0),
@@ -75,4 +76,31 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   });
 
   return NextResponse.json({ template });
+}
+
+export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+  const context = await getRequestContext();
+  if (!context) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  if (!canAdminister(context)) {
+    return NextResponse.json({ error: "Administrator access is required." }, { status: 403 });
+  }
+
+  const template = await prisma.template.findFirst({
+    where: { id: params.id, orgId: context.org.id },
+    include: { _count: { select: { signForms: true } } },
+  });
+  if (!template) return NextResponse.json({ error: "Template not found." }, { status: 404 });
+
+  await prisma.template.delete({ where: { id: template.id } });
+
+  try {
+    await deleteObject(template.originalKey);
+  } catch (error) {
+    console.error("Deleted template PDF could not be removed from object storage", error);
+  }
+
+  return NextResponse.json({
+    deleted: true,
+    signFormsDeleted: template._count.signForms,
+  });
 }
