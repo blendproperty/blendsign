@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SignatureCanvas from "@/components/SignatureCanvas";
 
 type CaptureMethod = "type" | "draw" | "upload";
@@ -84,6 +84,8 @@ export default function SignatureCapture({
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const displayLabel = label === "initials" ? "initials" : "signature";
+
+  useEffect(() => setTypedText(defaultText), [defaultText]);
 
   function confirmTyped() {
     if (!typedText.trim()) return setError(`Enter the ${displayLabel} text first.`);

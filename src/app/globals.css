@@ -489,6 +489,31 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .template-recipient-row { display: grid; grid-template-columns: 180px 1fr 1fr; gap: 12px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line); }
 .template-recipient-row > div { display: grid; gap: 4px; }
 .template-recipient-row small { color: var(--muted); font-size: 9px; }
+.self-sign-page { display: grid; gap: 24px; }
+.self-sign-page > .page-heading { margin-bottom: 0; }
+.self-sign-upload { max-width: none; }
+.self-sign-upload > .field-label { max-width: 720px; margin-bottom: 16px; }
+.self-sign-upload .upload-zone { min-height: 135px; }
+.self-sign-section { display: grid; gap: 18px; }
+.self-sign-section > .section-heading { padding: 0 5px; }
+.self-sign-builder { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; align-items: start; }
+.self-sign-tools { position: sticky; top: 92px; display: grid; gap: 15px; padding: 20px; }
+.self-sign-tools > h3 { margin: 0; font-size: 15px; }
+.self-sign-field-count { display: grid; grid-template-columns: 1fr 1fr; margin: 0; padding-top: 15px; border-top: 1px solid var(--line); }
+.self-sign-field-count div { display: grid; gap: 4px; }
+.self-sign-field-count dt { color: var(--muted); font-size: 8px; text-transform: uppercase; }
+.self-sign-field-count dd { margin: 0; font-size: 17px; font-weight: 750; }
+.self-sign-document { min-height: 520px; }
+.self-sign-placed-field { border-color: var(--brand-accent); background: color-mix(in srgb, var(--brand-accent) 18%, transparent); }
+.self-sign-values { max-width: none; }
+.self-sign-no-fields { padding: 18px; border: 1px dashed var(--line); border-radius: 9px; color: var(--muted); font-size: 11px; text-align: center; }
+.self-sign-value-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 22px; padding: 22px 0; border-top: 1px solid var(--line); }
+.self-sign-value-row > div:first-child { display: grid; align-content: start; gap: 5px; padding-top: 8px; }
+.self-sign-value-row > div:first-child strong { font-size: 12px; text-transform: capitalize; }
+.self-sign-value-row > div:first-child small { color: var(--muted); font-size: 9px; }
+.self-sign-value-row > .field-input { max-width: 680px; }
+.self-sign-value-row .captured-signature .text-button { margin-top: 9px; }
+.self-sign-complete { width: fit-content; min-width: 245px; }
 .signform-list { display: grid; gap: 12px; }
 .signform-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 22px; }
 .signform-title-line { display: flex; align-items: center; gap: 10px; }
@@ -730,6 +755,9 @@ a.stat-card:hover { border-color: #bbb6ad; }
   .template-grid { grid-template-columns: 1fr; }
   .template-builder-layout { grid-template-columns: 1fr; }
   .template-builder-sidebar { position: static; max-height: none; }
+  .self-sign-builder { grid-template-columns: 1fr; }
+  .self-sign-tools { position: static; }
+  .self-sign-value-row { grid-template-columns: 1fr; gap: 10px; }
   .template-recipient-row, .public-role { grid-template-columns: 1fr; }
   .signform-card { grid-template-columns: auto 1fr; }
   .signform-card-actions { grid-column: 1 / -1; }

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
+import SelfSignEditor from "@/components/SelfSignEditor";
 
 type SignerInput = { name: string; email: string; order: number };
 
@@ -12,6 +13,15 @@ type SignerInput = { name: string; email: string; order: number };
 // per signer) rather than a drag-and-drop editor — that's the next thing
 // to build (see README "Project status").
 export default function NewEnvelope() {
+  return <Suspense fallback={<div className="page"><div className="panel template-editor-empty">Loading document workflow…</div></div>}><NewEnvelopeRouter /></Suspense>;
+}
+
+function NewEnvelopeRouter() {
+  const searchParams = useSearchParams();
+  return searchParams.get("mode") === "self" ? <SelfSignEditor /> : <NewEnvelopeForm />;
+}
+
+function NewEnvelopeForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
