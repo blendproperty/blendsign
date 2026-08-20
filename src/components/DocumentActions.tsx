@@ -11,6 +11,7 @@ export default function DocumentActions({ id, signed }: { id: string; signed: bo
   }
   return (
     <div className="document-actions">
+      <a className="text-button" href={`/documents/${id}`}>Details</a>
       {signed && (
         <a className="text-button" href={`/api/envelopes/${id}/document?version=signed`} target="_blank" rel="noreferrer">
           View signed

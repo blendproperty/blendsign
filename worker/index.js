@@ -132,6 +132,40 @@ async function handleSealDocument({ envelopeId }) {
   if (failures.length) throw new Error(`Completed document delivery failed for ${failures.join("; ")}`);
 }
 
+async function handleEmailDocument({ envelopeId, emails, requestedById }) {
+  const envelope = await prisma.envelope.findUnique({
+    where: { id: envelopeId },
+    include: { org: true, signers: true },
+  });
+  if (!envelope || !envelope.signedKey || !envelope.sha256) {
+    throw new Error("Completed document is not available");
+  }
+
+  const document = await getObjectBuffer(envelope.signedKey);
+  const recipients = [...new Set((emails || []).map((email) => String(email).trim().toLowerCase()).filter(Boolean))].slice(0, 3);
+  if (!recipients.length) throw new Error("No email recipients supplied");
+
+  for (const email of recipients) {
+    const signer = envelope.signers.find((item) => item.email?.toLowerCase() === email);
+    const delivery = await sendCompletedDocumentEmail({
+      to: email,
+      signerName: signer?.name || "Recipient",
+      documentTitle: envelope.title,
+      document,
+      documentHash: envelope.sha256,
+      organisation: envelope.org,
+    });
+    await prisma.auditEvent.create({
+      data: {
+        envelopeId,
+        signerId: signer?.id,
+        eventType: "document_emailed",
+        metadata: { email, messageId: delivery?.messageId || null, requestedById: requestedById || null },
+      },
+    });
+  }
+}
+
 function decryptSecret(value) {
   const [iv, tag, encrypted] = value.split(".");
   const key = createHash("sha256").update(process.env.SESSION_SECRET).digest();
@@ -189,6 +223,8 @@ const worker = new Worker(
         return handleExpireEnvelopes();
       case "deliver-webhook":
         return handleDeliverWebhook(job.data);
+      case "email-document":
+        return handleEmailDocument(job.data);
       default:
         console.warn("unknown job", job.name);
     }

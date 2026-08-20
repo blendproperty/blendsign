@@ -20,7 +20,15 @@ export type IconName =
   | "mail"
   | "menu"
   | "close"
-  | "more";
+  | "more"
+  | "edit"
+  | "download"
+  | "printer"
+  | "zoomIn"
+  | "zoomOut"
+  | "expand"
+  | "certificate"
+  | "back";
 
 export function Icon({
   name,
@@ -54,6 +62,14 @@ export function Icon({
     menu: <path d="M4 7h16M4 12h16M4 17h16"/>,
     close: <path d="m6 6 12 12M18 6 6 18"/>,
     more: <><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></>,
+    edit: <><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></>,
+    download: <><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></>,
+    printer: <><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></>,
+    zoomIn: <><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5M10.5 7.5v6M7.5 10.5h6"/></>,
+    zoomOut: <><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5M7.5 10.5h6"/></>,
+    expand: <><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></>,
+    certificate: <><circle cx="12" cy="8" r="5"/><path d="m8.5 12-1 9 4.5-3 4.5 3-1-9"/><path d="m10 8 1.4 1.4L14.5 6"/></>,
+    back: <path d="m15 18-6-6 6-6"/>,
   };
 
   return (

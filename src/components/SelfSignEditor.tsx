@@ -201,7 +201,7 @@ export default function SelfSignEditor() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "The document could not be signed.");
-      router.push("/documents?status=completed");
+      router.push(`/documents/${result.envelopeId}`);
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The document could not be signed.");

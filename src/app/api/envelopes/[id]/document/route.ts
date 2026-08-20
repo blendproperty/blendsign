@@ -36,11 +36,12 @@ export async function GET(
     const document = await getObjectBuffer(key);
     const suffix = signed ? "-signed" : "-original";
     const filename = `${envelope.title}${suffix}.pdf`.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const disposition = request.nextUrl.searchParams.get("download") === "1" ? "attachment" : "inline";
 
     return new NextResponse(new Uint8Array(document), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="${filename}"`,
+        "Content-Disposition": `${disposition}; filename="${filename}"`,
         "Content-Length": String(document.length),
         "Cache-Control": "private, no-store, max-age=0",
         "X-Content-Type-Options": "nosniff",

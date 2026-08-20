@@ -47,7 +47,7 @@ export default async function Documents({ searchParams }: { searchParams: { stat
             <tbody>
               {envelopes.map((envelope) => (
                 <tr key={envelope.id}>
-                  <td><div className="document-name"><span className="file-tile"><Icon name="file" size={18} /></span><div><strong>{envelope.title}</strong><small>PDF document</small></div></div></td>
+                  <td><Link className="document-name" href={`/documents/${envelope.id}`}><span className="file-tile"><Icon name="file" size={18} /></span><div><strong>{envelope.title}</strong><small>PDF document</small></div></Link></td>
                   <td>{envelope.createdBy.name}</td>
                   <td>{envelope.signers.map((signer) => signer.email || signer.name).join(", ")}</td>
                   <td><span className={`status status--${envelope.status.toLowerCase().replace("_", "-")}`}>{envelope.status.replaceAll("_", " ")}</span></td>
