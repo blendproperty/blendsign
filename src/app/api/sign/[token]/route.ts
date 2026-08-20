@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { enqueueSealDocument, enqueueSendSigningLink } from "@/lib/queue";
+import { enqueueSealDocument, enqueueSendSigningLink, enqueueWebhookEvent } from "@/lib/queue";
 
 const submitSchema = z.object({
-  fields: z.array(z.object({ fieldId: z.string(), value: z.string() })),
+  fields: z.array(z.object({ fieldId: z.string(), value: z.string().min(1).max(2_000_000) })).max(300),
   consent: z.literal(true), // explicit consent to sign electronically, required
 });
 
@@ -42,6 +42,7 @@ export async function GET(
         userAgent: _req.headers.get("user-agent") || undefined,
       },
     });
+    await enqueueWebhookEvent(signer.envelopeId, "envelope.viewed");
   }
 
   return NextResponse.json({ signer });
@@ -70,6 +71,22 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const assignedFields = await prisma.field.findMany({
+    where: { signerId: signer.id },
+    select: { id: true, required: true, editableBySigner: true, value: true },
+  });
+  const assignedById = new Map(assignedFields.map((field) => [field.id, field]));
+  const submittedById = new Map(parsed.data.fields.map((field) => [field.fieldId, field.value]));
+  if (submittedById.size !== parsed.data.fields.length || parsed.data.fields.some((field) => !assignedById.has(field.fieldId))) {
+    return NextResponse.json({ error: "A submitted field does not belong to this signer." }, { status: 400 });
+  }
+  if (assignedFields.some((field) => field.required && !(submittedById.get(field.id) || field.value))) {
+    return NextResponse.json({ error: "Complete every signing field before submitting." }, { status: 400 });
+  }
+  if (assignedFields.some((field) => !field.editableBySigner && submittedById.has(field.id) && submittedById.get(field.id) !== field.value)) {
+    return NextResponse.json({ error: "A pre-filled field cannot be changed." }, { status: 400 });
+  }
+
   await Promise.all(
     parsed.data.fields.map((f) =>
       prisma.field.update({ where: { id: f.fieldId }, data: { value: f.value } })
@@ -91,6 +108,7 @@ export async function POST(
       metadata: { consent: true },
     },
   });
+  await enqueueWebhookEvent(signer.envelopeId, "envelope.signed");
 
   const allSigners = await prisma.signer.findMany({
     where: { envelopeId: signer.envelopeId },

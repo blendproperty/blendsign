@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { presignedDownloadUrl } from "@/lib/storage";
 import SignClient from "./SignClient";
+import { Icon } from "@/components/Icon";
+import type { CSSProperties } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -14,42 +15,25 @@ export default async function SignPage({
 }) {
   const signer = await prisma.signer.findUnique({
     where: { token: params.token },
-    include: { envelope: true, fields: true },
+    include: { envelope: { include: { org: true } }, fields: true },
   });
 
   if (!signer) return notFound();
 
-  const docUrl = await presignedDownloadUrl(signer.envelope.originalKey);
+  const docUrl = `/api/sign/${params.token}/document`;
 
+  const organisation = signer.envelope.org;
+  const logoUrl = organisation.logoKey ? `/api/brand/${organisation.id}/logo?v=${organisation.updatedAt.getTime()}` : organisation.logoUrl;
+  const brandStyle = { "--sign-primary": organisation.primaryColour, "--sign-accent": organisation.accentColour } as CSSProperties;
   return (
-    <main style={{ maxWidth: 800, margin: "40px auto", padding: "0 24px" }}>
-      <h1>{signer.envelope.title}</h1>
-      <p>Signing as {signer.name}</p>
-
-      {signer.status === "SIGNED" ? (
-        <p>You&rsquo;ve already signed this document.</p>
-      ) : (
-        <>
-          <p>
-            <a href={docUrl} target="_blank" rel="noreferrer">
-              View the full document →
-            </a>
-          </p>
-          <SignClient
-            token={params.token}
-            documentTitle={signer.envelope.title}
-            fields={signer.fields.map((f) => ({
-              id: f.id,
-              type: f.type,
-              page: f.page,
-              x: f.x,
-              y: f.y,
-              width: f.width,
-              height: f.height,
-            }))}
-          />
-        </>
-      )}
+    <main className="sign-recipient" style={brandStyle}>
+      <header className="sign-recipient-header"><div className="sign-company-brand">{logoUrl ? <img src={logoUrl} alt={`${organisation.name} logo`} /> : <strong>{organisation.name}</strong>}</div><div className="sign-powered">Securely powered by <b>blendSIGN</b></div></header>
+      <div className="sign-recipient-body">
+        <section className="sign-document-card"><span><Icon name="file" size={25} /></span><div><small>Signature request from {organisation.name}</small><h1>{signer.envelope.title}</h1><p>Prepared for {signer.name}</p></div><a href={docUrl} target="_blank" rel="noreferrer" className="button button--outline">View PDF</a></section>
+        <section className="sign-fields-card panel">
+          {signer.status === "SIGNED" ? <div className="sign-complete"><span><Icon name="check" size={29} /></span><h2>Already signed</h2><p>Your signature has been securely recorded.</p></div> : <SignClient token={params.token} signerName={signer.name} documentTitle={signer.envelope.title} legalDisclosure={organisation.legalDisclosure || undefined} fields={signer.fields.map((f) => ({ id: f.id, type: f.type, label: f.label, required: f.required, editableBySigner: f.editableBySigner, value: f.value, page: f.page, x: f.x, y: f.y, width: f.width, height: f.height }))} />}
+        </section>
+      </div>
     </main>
   );
 }

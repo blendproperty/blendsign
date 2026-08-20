@@ -4,12 +4,14 @@ import { useRef, useState } from "react";
 
 export default function SignatureCanvas({
   onCapture,
-  width = 400,
-  height = 150,
+  width = 640,
+  height = 220,
+  label = "signature",
 }: {
   onCapture: (dataUrl: string) => void;
   width?: number;
   height?: number;
+  label?: "signature" | "initials";
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
@@ -19,10 +21,14 @@ export default function SignatureCanvas({
 
   const pos = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current!.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    return {
+      x: (e.clientX - rect.left) * (canvasRef.current!.width / rect.width),
+      y: (e.clientY - rect.top) * (canvasRef.current!.height / rect.height),
+    };
   };
 
   const start = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
     drawing.current = true;
     const ctx = getCtx();
     if (!ctx) return;
@@ -36,7 +42,7 @@ export default function SignatureCanvas({
     const ctx = getCtx();
     if (!ctx) return;
     const { x, y } = pos(e);
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.lineCap = "round";
     ctx.strokeStyle = "#111";
     ctx.lineTo(x, y);
@@ -44,8 +50,11 @@ export default function SignatureCanvas({
     setHasStroke(true);
   };
 
-  const end = () => {
+  const end = (e: React.PointerEvent<HTMLCanvasElement>) => {
     drawing.current = false;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
   };
 
   const clear = () => {
@@ -61,23 +70,24 @@ export default function SignatureCanvas({
   };
 
   return (
-    <div>
+    <div className={`signature-pad signature-pad--${label}`}>
       <canvas
         ref={canvasRef}
         width={width}
         height={height}
-        style={{ border: "1px solid #ccc", touchAction: "none", background: "#fff" }}
+        className="signature-canvas"
+        aria-label={`Draw your ${label}`}
         onPointerDown={start}
         onPointerMove={move}
         onPointerUp={end}
         onPointerLeave={end}
       />
-      <div style={{ marginTop: 8 }}>
-        <button onClick={clear} type="button">
+      <div className="signature-actions">
+        <button className="button button--quiet" onClick={clear} type="button">
           Clear
-        </button>{" "}
-        <button onClick={confirm} type="button" disabled={!hasStroke}>
-          Use this signature
+        </button>
+        <button className="button button--dark" onClick={confirm} type="button" disabled={!hasStroke}>
+          Use {label}
         </button>
       </div>
     </div>

@@ -34,15 +34,58 @@ node worker/index.js
 ## Production deploy
 
 ```bash
-cp .env.example .env      # set APP_DOMAIN, ACME_EMAIL, real secrets
+cp .env.example .env      # set APP_DOMAIN, ACME_EMAIL and real secrets
+# Generate SESSION_SECRET with: openssl rand -hex 32
 docker compose up -d --build
+docker compose exec -T app npx prisma db push
 ```
 
 Traefik handles TLS automatically for `APP_DOMAIN` via Let's Encrypt's
 HTTP challenge. Point your DNS A record at the host before starting, or
 the ACME challenge will fail.
 
-## Project status
+## Administration and companies
+
+BlendSign has protected administrator and company-user sign-in. Set
+`ADMIN_EMAIL`, a unique `ADMIN_PASSWORD`, and a random `SESSION_SECRET` in
+`.env` before the first production start.
+
+The administrator can create separate company workspaces under
+**Settings > Companies**. Each company has isolated documents, contacts,
+users, roles, API keys, webhook endpoints, organisation details, colours,
+logo, legal disclosure and custom-domain setting. Use the company switcher
+in the top bar before creating or managing documents.
+
+## API and webhooks
+
+Create a company-scoped key under **Settings > Integrations and API**. The
+key is shown once and stored only as a SHA-256 hash.
+
+```bash
+curl -H 'Authorization: Bearer bs_live_YOUR_KEY' \
+  https://sign.example.co.za/api/v1/health
+
+curl -H 'Authorization: Bearer bs_live_YOUR_KEY' \
+  https://sign.example.co.za/api/v1/envelopes
+
+curl -H 'Authorization: Bearer bs_live_YOUR_KEY' \
+  https://sign.example.co.za/api/v1/templates
+
+curl -H 'Authorization: Bearer bs_live_YOUR_KEY' \
+  https://sign.example.co.za/api/v1/templates/stor24-unit-lease
+```
+
+Template discovery returns only templates owned by the API key's company.
+The detail endpoint exposes the configured roles, field labels, merge data
+keys, defaults, requirements and page occurrences without exposing private
+PDF storage keys.
+
+Webhook requests include `x-blendsign-event` and an
+`x-blendsign-signature: sha256=...` HMAC header. Webhook secrets are
+encrypted at rest using `SESSION_SECRET`, shown once, and retried through
+BullMQ when delivery fails.
+
+## Signing status
 
 End-to-end signing flow works: upload a PDF at `/new`, add signers, send —
 each signer gets a tokenized link (`/sign/[token]`), draws their signature
@@ -56,23 +99,25 @@ Still simplified / not yet built:
 - **Field placement is hardcoded** (`/new` auto-places one signature box
   per signer on page 1) rather than a drag-and-drop editor over the
   rendered PDF. This is the next priece of work.
-- **No auth** — `/new` posts a hardcoded `orgId`/`createdById`. Needs real
-  auth (NextAuth or similar) before this is usable beyond a single person.
-- **WhatsApp delivery** logs a `wa.me` link rather than sending via the
-  WhatsApp Business API — fine for manual send in the interim, not
-  automated.
+- **WhatsApp delivery** uses the Meta API when the token, phone number ID
+  and API version are configured. Without all three it logs a manual
+  `wa.me` fallback link.
 - **Email** uses SMTP via nodemailer if `SMTP_HOST` is set, otherwise logs
   to console — wire up real SMTP creds (or a transactional email provider)
   before relying on it.
-- **POPIA consent/retention flows** (privacy policy acceptance, data
-  deletion tooling, retention period enforcement) are not yet built —
-  see the project scope doc.
+- **Retention automation** is not yet scheduled. Administrators can move
+  documents to trash, restore them, or permanently remove database and
+  MinIO objects manually.
+- **Custom company domains** are stored per company, but their DNS,
+  Traefik routing and TLS certificate must be configured on the host before
+  they receive live signing traffic.
 - Expiry (`expire-envelopes` job) exists but nothing schedules it yet —
   needs a cron trigger, e.g. via BullMQ repeatable jobs or an external
   scheduler hitting a cron endpoint.
 
 ## Architecture
 
-See `prisma/schema.prisma` for the data model (Org, User, Envelope,
-Signer, Field, AuditEvent) and `docker-compose.yml` for the service
+See `prisma/schema.prisma` for the data model (Org, OrgMembership, User,
+Contact, ApiKey, WebhookEndpoint, Envelope, Signer, Field and AuditEvent)
+and `docker-compose.yml` for the service
 topology (Traefik, app, worker, Postgres, Redis, MinIO).

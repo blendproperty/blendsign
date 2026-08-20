@@ -1,4 +1,5 @@
 import "./globals.css";
+import AppShell from "@/components/AppShell";
 
 export const metadata = {
   title: "BlendSign",
@@ -12,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body><AppShell>{children}</AppShell></body>
     </html>
   );
 }
