@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
+import SignatureCapture from "@/components/SignatureCapture";
 
 type Organisation = {
   id: string;
@@ -85,7 +86,7 @@ export default function BrandingPage() {
     setMessage("Company logo removed.");
   }
 
-  async function uploadSigningAsset(kind: "signature" | "initials", file: File | null) {
+  async function uploadSigningAsset(kind: "signature" | "initials", file: Blob | null) {
     if (!file) return;
     setUploading(true); setMessage(`Uploading authorised ${kind}…`);
     const response = await fetch(`/api/settings/organisation/signing-assets/${kind}`, { method: "POST", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
@@ -93,6 +94,15 @@ export default function BrandingPage() {
     if (!response.ok) return setMessage(data.error || `The ${kind} could not be uploaded.`);
     setOrganisation(data.organisation); setSignatureConfigured(Boolean(data.signatureConfigured)); setInitialsConfigured(Boolean(data.initialsConfigured));
     setMessage(`Authorised ${kind} uploaded. Auto-signing remains disabled until explicitly enabled.`);
+  }
+
+  async function saveCapturedSigningAsset(kind: "signature" | "initials", dataUrl: string) {
+    try {
+      const file = await fetch(dataUrl).then((response) => response.blob());
+      await uploadSigningAsset(kind, file);
+    } catch {
+      setMessage(`The authorised ${kind} could not be prepared for storage.`);
+    }
   }
 
   if (!organisation) return <div className="settings-loading">Loading company settings…</div>;
@@ -162,14 +172,20 @@ export default function BrandingPage() {
           </>}
 
           {section === "signing" && <>
-            <div className="form-section-title"><h3>Authorised company signing</h3><p>Store the authorised representative’s signing assets for audited countersigning. Uploading or replacing either image disables automation until it is reviewed and enabled again.</p></div>
+            <div className="form-section-title"><h3>Authorised company signing</h3><p>Store the authorised representative’s signing assets for audited countersigning. Creating or replacing either image disables automation until it is reviewed and enabled again.</p></div>
             <div className="form-grid">
               <label className="field-label">Authorised representative<input className="field-input" value={organisation.authorisedSignerName || ""} onChange={(event) => set("authorisedSignerName", event.target.value)} placeholder="Full legal name" /></label>
               <label className="field-label">Position / title<input className="field-input" value={organisation.authorisedSignerTitle || ""} onChange={(event) => set("authorisedSignerTitle", event.target.value)} placeholder="Authorised representative" /></label>
             </div>
-            <div className="brand-logo-row">
-              <label className={`brand-logo-upload ${uploading ? "is-uploading" : ""}`}><input type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading} onChange={(event) => { uploadSigningAsset("signature", event.target.files?.[0] || null); event.currentTarget.value = ""; }} /><Icon name="upload" size={21} /><span><strong>{signatureConfigured ? "Replace authorised signature" : "Upload authorised signature"}</strong><small>{signatureConfigured ? "Signature configured" : "PNG, JPG or WebP. Maximum 2 MB."}</small></span></label>
-              <label className={`brand-logo-upload ${uploading ? "is-uploading" : ""}`}><input type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading} onChange={(event) => { uploadSigningAsset("initials", event.target.files?.[0] || null); event.currentTarget.value = ""; }} /><Icon name="upload" size={21} /><span><strong>{initialsConfigured ? "Replace authorised initials" : "Upload authorised initials"}</strong><small>{initialsConfigured ? "Initials configured" : "PNG, JPG or WebP. Maximum 2 MB."}</small></span></label>
+            <div className="authorised-signing-assets">
+              <section className="authorised-signing-asset">
+                <div><h4>Authorised signature</h4><p>{signatureConfigured ? "Signature configured. Creating another will replace it." : "Choose Type, Draw or Upload to create the stored signature."}</p></div>
+                <SignatureCapture signerName={organisation.authorisedSignerName || ""} label="signature" onCapture={(dataUrl) => { void saveCapturedSigningAsset("signature", dataUrl); }} />
+              </section>
+              <section className="authorised-signing-asset">
+                <div><h4>Authorised initials</h4><p>{initialsConfigured ? "Initials configured. Creating another will replace them." : "Choose Type, Draw or Upload to create the stored initials."}</p></div>
+                <SignatureCapture signerName={organisation.authorisedSignerName || ""} label="initials" onCapture={(dataUrl) => { void saveCapturedSigningAsset("initials", dataUrl); }} />
+              </section>
             </div>
             <label className="check-label"><input type="checkbox" checked={organisation.autoSignEnabled} disabled={!signatureConfigured || !initialsConfigured || !organisation.authorisedSignerName} onChange={(event) => setOrganisation({ ...organisation, autoSignEnabled: event.target.checked })} /><span>Allow approved integrations to apply this representative’s stored signature and initials automatically</span></label>
             <div className="legal-note"><Icon name="shield" size={20} /><p>Every automatic signature is attributed to this representative and written to the envelope audit trail. Integrations must request it explicitly per envelope.</p></div>

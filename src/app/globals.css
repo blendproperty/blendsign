@@ -820,6 +820,11 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .signature-upload-zone small { color: var(--muted); font-size: 9px; }
 .signature-upload-zone img { display: block; width: 100%; max-height: 190px; object-fit: contain; }
 .signature-upload-panel .signature-actions { margin: 0; }
+.authorised-signing-assets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.authorised-signing-asset { min-width: 0; display: grid; align-content: start; gap: 14px; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.authorised-signing-asset h4 { margin: 0 0 4px; font-size: 15px; }
+.authorised-signing-asset p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+@media (max-width: 900px) { .authorised-signing-assets { grid-template-columns: 1fr; } }
 .signature-capture-error { margin: -5px 20px 17px; color: var(--danger); font-size: 10px; }
 .captured-signature { width: min(100%, 680px); }
 .captured-signature img { display: block; width: 100%; max-height: 230px; object-fit: contain; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
