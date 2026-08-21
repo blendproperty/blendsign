@@ -40,13 +40,15 @@ Active development fork:
 https://github.com/doveydragon/blendsign
 ```
 
-Current deployment branch:
+Production deployment source:
 
 ```text
-agent/blendsign-admin-redesign
+blendproperty/blendsign main
 ```
 
-Verified 21 August 2026: the recorded production-fork head `721b3ce` is an ancestor of organisation `main` (`01156e7`) and of integration branch `codex/stor24-envelope-api`. The integration branch is five commits ahead of that recorded fork head, so there is no divergent production-only history in the recorded branch. The actual VPS checkout SHA must still be confirmed immediately before deployment.
+Deployed and verified 21 August 2026: production is on commit `ec21c9389c6ae005474a1810e9335742ef46feb9` from organisation `main`. GitHub Actions run `32453728097`, attempt 2, completed successfully after checking out that exact commit, taking a PostgreSQL backup, building both `app` and `worker`, running `prisma migrate deploy`, recreating both services and receiving HTTP 200 from the public `/login` health probe. The first attempt did not reach the VPS because SSH port 22 timed out; the successful retry completed in 1 minute 46 seconds.
+
+The production database predated Prisma migration tracking. Before the successful deployment, the reviewed SQL for `20260821110000_envelope_external_idempotency` was applied directly and then recorded with `prisma migrate resolve --applied`; `prisma migrate status` subsequently reported the schema up to date. The pre-change backup is `/root/backups/blendsign-predeploy-20260821-060821.sql.gz` (461 KB). The successful deployment also took a fresh timestamped pre-deployment backup through the guarded workflow.
 
 Current production hostname:
 
@@ -60,7 +62,7 @@ The production checkout is normally located at:
 /root/blendsign
 ```
 
-Do not assume the organisation repository's `main` branch contains the latest production work. Confirm the active fork branch and current VPS commit before making or deploying changes.
+Do not infer production state from a Git push alone. Confirm the successful deployment run, exact VPS commit and live service checks before reporting a change as deployed.
 
 ## 3. Technology stack
 
@@ -741,17 +743,7 @@ The project currently has no complete automated integration-test suite. A succes
 
 ## 20. Production deployment
 
-The VPS normally receives the active fork branch with:
-
-```bash
-cd /root/blendsign
-
-git fetch https://github.com/doveydragon/blendsign.git \
-  agent/blendsign-admin-redesign
-
-git merge --ff-only FETCH_HEAD
-git log -1 --oneline
-```
+Production deployments use the manual `Deploy to VPS` workflow in `.github/workflows/deploy-vps.yml`. It deploys the requested organisation-repository ref (normally `main`) as a detached checkout and performs the backup, build, migration, restart and health probe as one guarded job.
 
 For application-only changes:
 
@@ -767,18 +759,18 @@ docker compose build app worker
 docker compose up -d --no-deps --force-recreate app worker
 ```
 
-For Prisma schema changes, run the database update after building and before recreating the services:
+For Prisma schema changes, use committed migrations after building and before recreating the services:
 
 ```bash
-docker compose run --rm --no-deps app npx prisma db push
+docker compose run --rm --no-deps app npx prisma migrate deploy
 ```
 
-Then verify:
+Then verify the workflow logs and independently confirm:
 
 ```bash
 docker compose ps
 docker compose logs --tail=60 app worker
-curl -Ik https://blendsign.srv938083.hstgr.cloud/templates
+curl -Ik https://blendsign.srv938083.hstgr.cloud/login
 ```
 
 Never use destructive database reset commands in production. Take and test backups before significant schema or storage changes.
@@ -893,13 +885,14 @@ Before publishing:
 
 ## 25. Current next step
 
+Task 1 is complete: the BlendSign integration is merged and production commit `ec21c93` was deployed by successful Actions run `32453728097` with backup, committed migration, app/worker rebuild and public health verification.
+
 The immediate next stage is:
 
-1. Merge the BlendSign integration branch, confirm the exact VPS SHA, run the manual deployment with backup, Prisma migration, app/worker rebuild and health checks.
-2. Create a Stor24-owned BlendSign API key, configure it server-side in the Stor24 portal, configure the matching signed webhook URL/secret, and never expose either secret in browser code or logs.
-3. Merge and deploy `codex/blendsign-lease-routing` in `blendproperty/stor24-portal`, including its Prisma migration.
-4. Run disposable end-to-end tests for both routes: card/EFT/other must select the 37-field standard template; debit order must select the 53-field mandate template and require its banking fields. Both must complete Signer 1 then Stor24 Rep, deliver a valid signed webhook, activate the tenancy/occupancy only after completion, store the external envelope ID, and remain idempotent on retry.
-5. Negative-test invalid webhook signatures, unknown merge keys, missing recipient roles and a simulated BlendSign outage; verify failures remain visible and reconcilable without creating duplicate envelopes.
-6. Add secure completed-PDF/certificate retrieval and the Stor24 tenant/lease Documents UI; this remains an implementation gap, not merely a test.
+1. Create a Stor24-owned BlendSign API key, configure it server-side in the Stor24 portal, configure the matching signed webhook URL/secret, and never expose either secret in browser code or logs.
+2. Merge and deploy `codex/blendsign-lease-routing` in `blendproperty/stor24-portal`, including its Prisma migration.
+3. Run disposable end-to-end tests for both routes: card/EFT/other must select the 37-field standard template; debit order must select the 53-field mandate template and require its banking fields. Both must complete Signer 1 then Stor24 Rep, deliver a valid signed webhook, activate the tenancy/occupancy only after completion, store the external envelope ID, and remain idempotent on retry.
+4. Negative-test invalid webhook signatures, unknown merge keys, missing recipient roles and a simulated BlendSign outage; verify failures remain visible and reconcilable without creating duplicate envelopes.
+5. Add secure completed-PDF/certificate retrieval and the Stor24 tenant/lease Documents UI; this remains an implementation gap, not merely a test.
 
 Production customer records must not be used for the first verification. Clean up disposable records only after evidence has been retained.
