@@ -46,6 +46,8 @@ Current deployment branch:
 agent/blendsign-admin-redesign
 ```
 
+Verified 21 August 2026: the recorded production-fork head `721b3ce` is an ancestor of organisation `main` (`01156e7`) and of integration branch `codex/stor24-envelope-api`. The integration branch is five commits ahead of that recorded fork head, so there is no divergent production-only history in the recorded branch. The actual VPS checkout SHA must still be confirmed immediately before deployment.
+
 Current production hostname:
 
 ```text
@@ -540,7 +542,7 @@ curl -sS \
 
 Never place a real API key in source control, screenshots or chat transcripts.
 
-The branch prepared on 21 August 2026 implements template-based envelope creation. It is code-complete and build-tested locally, but it is not deployed, migrated, configured or live-tested; do not claim Stor24 automation is live until those production steps and both payment paths are verified.
+The branch prepared on 21 August 2026 implements template-based envelope creation. It is code-complete and build-tested locally, but it is not deployed, migrated, configured or live-tested; do not claim Stor24 automation is live until those production steps and both payment paths are verified. Branch `codex/stor24-envelope-api` is pushed at `a9f77b5`. A guarded, manual `Deploy to VPS` workflow and repository secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` and `VPS_KNOWN_HOSTS` are configured in `blendproperty/blendsign`; the SSH key was verified against `/root/blendsign`. The workflow has not been run.
 
 ## 17. Stor24 integration plan
 
@@ -891,4 +893,13 @@ Before publishing:
 
 ## 25. Current next step
 
-The immediate next stage is deployment/configuration in a controlled environment followed by disposable end-to-end tests for both template routes. Production customer records must not be used for the first verification. Completed-PDF/certificate retrieval and a Stor24 Documents download surface follow after the send/sign/activate contract is proven.
+The immediate next stage is:
+
+1. Merge the BlendSign integration branch, confirm the exact VPS SHA, run the manual deployment with backup, Prisma migration, app/worker rebuild and health checks.
+2. Create a Stor24-owned BlendSign API key, configure it server-side in the Stor24 portal, configure the matching signed webhook URL/secret, and never expose either secret in browser code or logs.
+3. Merge and deploy `codex/blendsign-lease-routing` in `blendproperty/stor24-portal`, including its Prisma migration.
+4. Run disposable end-to-end tests for both routes: card/EFT/other must select the 37-field standard template; debit order must select the 53-field mandate template and require its banking fields. Both must complete Signer 1 then Stor24 Rep, deliver a valid signed webhook, activate the tenancy/occupancy only after completion, store the external envelope ID, and remain idempotent on retry.
+5. Negative-test invalid webhook signatures, unknown merge keys, missing recipient roles and a simulated BlendSign outage; verify failures remain visible and reconcilable without creating duplicate envelopes.
+6. Add secure completed-PDF/certificate retrieval and the Stor24 tenant/lease Documents UI; this remains an implementation gap, not merely a test.
+
+Production customer records must not be used for the first verification. Clean up disposable records only after evidence has been retained.
