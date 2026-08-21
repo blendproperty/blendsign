@@ -44,7 +44,17 @@ export default function SignClient({
   const otherFields = fields.filter((field) => field.type !== "SIGNATURE" && field.type !== "INITIALS").sort((a, b) => (priority[a.dataKey || ""] ?? 100) - (priority[b.dataKey || ""] ?? 100));
   const allFilled = fields.every((field) => !field.required || values[field.id]);
   const postalField = fields.find((field) => field.dataKey === "tenant.postalCode");
+  const branchCodeField = fields.find((field) => field.dataKey === "debitOrder.branchCode");
   const cityPostalCodes: Record<string, string> = { Alberton: "1449", Benoni: "1501", Bloemfontein: "9301", "Cape Town": "8001", Centurion: "0157", Durban: "4001", "East London": "5201", George: "6529", Gqeberha: "6001", Johannesburg: "2000", Kimberley: "8301", Midrand: "1685", Mbombela: "1200", Paarl: "7646", Pietermaritzburg: "3201", Polokwane: "0700", Pretoria: "0002", Randburg: "2194", Rustenburg: "0300", Sandton: "2196", Soweto: "1804", Stellenbosch: "7600" };
+  const southAfricanBanks: Record<string, string> = {
+    "Absa Bank": "632005",
+    "Capitec Bank": "470010",
+    "Discovery Bank": "679000",
+    "First National Bank (FNB)": "250655",
+    "Investec Bank": "580105",
+    "Nedbank": "198765",
+    "Standard Bank": "051001",
+  };
   const displayLabel = (field: Field) => {
     if (field.dataKey === "lease.signedAt" || field.dataKey === "debitOrder.signedAt") return "Signed at (town/city where you are signing)";
     if ((field.label || "").toLowerCase().includes("final execution date")) return "Final execution date (date Stor24 countersigns and completes the agreement)";
@@ -138,11 +148,21 @@ export default function SignClient({
       })}
 
       {otherFields.map((f) => (
-        <div className={`sign-field ${f.required ? "sign-field--required" : "sign-field--optional"}`} key={f.id}>
+        <div className={`sign-field ${f.required ? "sign-field--required" : "sign-field--optional"} ${!f.editableBySigner ? "sign-field--locked" : ""}`} key={f.id}>
           <div className="sign-field-label">
-            <span>{displayLabel(f)}{f.required ? <b className="required-asterisk" aria-label="required">*</b> : <em className="optional-badge">Optional</em>}</span><small>Page {f.page}</small>
+            <span>{displayLabel(f)}{f.required ? <b className="required-asterisk" aria-label="required">*</b> : <em className="optional-badge">Optional</em>}</span><small>Page {f.page}{!f.editableBySigner ? " · Locked by Stor24" : ""}</small>
           </div>
-          {f.dataKey === "tenant.city" ? (
+          {f.dataKey === "debitOrder.bankName" ? (
+            <><input className="field-input" list="south-african-banks" placeholder="Select or type a South African bank" value={values[f.id] || ""} aria-required={f.required} onChange={(event) => { const bank = event.target.value; setValues((current) => ({ ...current, [f.id]: bank, ...(branchCodeField ? { [branchCodeField.id]: southAfricanBanks[bank] || "" } : {}) })); }} /><datalist id="south-african-banks">{Object.keys(southAfricanBanks).map((bank) => <option value={bank} key={bank} />)}<option value="Other South African bank" /></datalist></>
+          ) : f.dataKey === "debitOrder.branchCode" ? (
+            <input className="field-input" inputMode="numeric" maxLength={6} placeholder="6-digit branch code" value={values[f.id] || ""} readOnly={!f.editableBySigner || Object.values(southAfricanBanks).includes(values[f.id] || "")} aria-required={f.required} onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value.replace(/\D/g, "").slice(0, 6) }))} />
+          ) : f.dataKey === "debitOrder.accountType" ? (
+            <select className="field-input" aria-required={f.required} value={values[f.id] || ""} onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value }))}>
+              <option value="">Select account type…</option><option value="Current">Current</option><option value="Cheque">Cheque</option><option value="Savings">Savings</option><option value="Transmission">Transmission</option>
+            </select>
+          ) : f.dataKey === "lease.signedAt" || f.dataKey === "debitOrder.signedAt" ? (
+            <><input className="field-input" list="south-african-signing-cities" placeholder="Select or type town / city" value={values[f.id] || ""} aria-required={f.required} onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value }))} /><datalist id="south-african-signing-cities">{Object.keys(cityPostalCodes).sort().map((city) => <option value={city} key={city} />)}</datalist></>
+          ) : f.dataKey === "tenant.city" ? (
             <select className="field-input" aria-required={f.required} value={values[f.id] || ""} disabled={!f.editableBySigner} onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value, ...(postalField && cityPostalCodes[event.target.value] ? { [postalField.id]: cityPostalCodes[event.target.value] } : {}) }))}>
               <option value="">Select city / suburb…</option>
               {values[f.id] && !cityPostalCodes[values[f.id]] ? <option value={values[f.id]}>{values[f.id]}</option> : null}

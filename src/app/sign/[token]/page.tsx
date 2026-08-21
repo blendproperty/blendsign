@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import SignClient from "./SignClient";
 import { Icon } from "@/components/Icon";
 import type { CSSProperties } from "react";
+import { isStor24ControlledField } from "@/lib/signingFieldPolicy";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export default async function SignPage({
       <div className="sign-recipient-body">
         <section className="sign-document-card"><span><Icon name="file" size={25} /></span><div><small>Signature request from {organisation.name}</small><h1>{signer.envelope.title}</h1><p>Prepared for {signer.name}</p></div><a href={docUrl} target="_blank" rel="noreferrer" className="button button--outline">View PDF</a></section>
         <section className="sign-fields-card panel">
-          {signer.status === "SIGNED" ? <div className="sign-complete"><span><Icon name="check" size={29} /></span><h2>Already signed</h2><p>Your signature has been securely recorded.</p></div> : <SignClient token={params.token} signerName={signer.name} documentTitle={signer.envelope.title} legalDisclosure={organisation.legalDisclosure || undefined} fields={signer.fields.map((f) => ({ id: f.id, type: f.type, label: f.label, dataKey: f.dataKey, required: f.required, editableBySigner: f.editableBySigner, value: f.value, page: f.page, x: f.x, y: f.y, width: f.width, height: f.height }))} />}
+          {signer.status === "SIGNED" ? <div className="sign-complete"><span><Icon name="check" size={29} /></span><h2>Already signed</h2><p>Your signature has been securely recorded.</p></div> : <SignClient token={params.token} signerName={signer.name} documentTitle={signer.envelope.title} legalDisclosure={organisation.legalDisclosure || undefined} fields={signer.fields.map((f) => ({ id: f.id, type: f.type, label: f.label, dataKey: f.dataKey, required: f.required, editableBySigner: f.editableBySigner && !(signer.envelope.externalSystem === "stor24" && isStor24ControlledField(f.dataKey)), value: f.value, page: f.page, x: f.x, y: f.y, width: f.width, height: f.height }))} />}
         </section>
       </div>
     </main>

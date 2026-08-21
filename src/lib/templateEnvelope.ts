@@ -3,6 +3,7 @@ import type { Template, TemplateField, TemplateRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getObjectBuffer, putObjectBuffer } from "@/lib/storage";
 import { enqueueSendSigningLink, enqueueWebhookEvent } from "@/lib/queue";
+import { isStor24ControlledField } from "@/lib/signingFieldPolicy";
 
 type PreparedTemplate = Template & {
   roles: (TemplateRole & { fields: TemplateField[] })[];
@@ -86,7 +87,7 @@ export async function createEnvelopeFromTemplate({
       label: field.label,
       dataKey: field.dataKey,
       required: field.required,
-      editableBySigner: field.editableBySigner,
+      editableBySigner: field.editableBySigner && !(externalSystem === "stor24" && field.dataKey && data?.[field.dataKey] !== undefined && isStor24ControlledField(field.dataKey)),
       page: field.page,
       x: field.x,
       y: field.y,

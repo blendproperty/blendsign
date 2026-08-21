@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { enqueueSealDocument, enqueueSendSigningLink, enqueueWebhookEvent } from "@/lib/queue";
 import { applyAuthorisedCompanySignature } from "@/lib/authorisedSigning";
+import { isStor24ControlledField } from "@/lib/signingFieldPolicy";
 
 const submitSchema = z.object({
   fields: z.array(z.object({ fieldId: z.string(), value: z.string().min(1).max(2_000_000) })).max(300),
@@ -74,7 +75,7 @@ export async function POST(
 
   const assignedFields = await prisma.field.findMany({
     where: { signerId: signer.id },
-    select: { id: true, required: true, editableBySigner: true, value: true },
+    select: { id: true, dataKey: true, required: true, editableBySigner: true, value: true },
   });
   const assignedById = new Map(assignedFields.map((field) => [field.id, field]));
   const submittedById = new Map(parsed.data.fields.map((field) => [field.fieldId, field.value]));
@@ -84,7 +85,7 @@ export async function POST(
   if (assignedFields.some((field) => field.required && !(submittedById.get(field.id) || field.value))) {
     return NextResponse.json({ error: "Complete every signing field before submitting." }, { status: 400 });
   }
-  if (assignedFields.some((field) => !field.editableBySigner && submittedById.has(field.id) && submittedById.get(field.id) !== field.value)) {
+  if (assignedFields.some((field) => (!field.editableBySigner || (signer.envelope.externalSystem === "stor24" && isStor24ControlledField(field.dataKey))) && submittedById.has(field.id) && submittedById.get(field.id) !== field.value)) {
     return NextResponse.json({ error: "A pre-filled field cannot be changed." }, { status: 400 });
   }
 
