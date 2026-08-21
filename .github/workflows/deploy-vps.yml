@@ -1,0 +1,54 @@
+name: Deploy to VPS
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to deploy
+        required: true
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: blendsign-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Configure SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          test -n "$VPS_HOST"
+          test -n "$VPS_KNOWN_HOSTS"
+          test -n "$VPS_SSH_KEY"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/blendsign_deploy
+          chmod 600 ~/.ssh/known_hosts ~/.ssh/blendsign_deploy
+
+      - name: Deploy requested ref
+        env:
+          DEPLOY_REF: ${{ inputs.ref }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          test -n "$VPS_USER"
+          ssh -i ~/.ssh/blendsign_deploy "$VPS_USER@$VPS_HOST" \
+            "cd /root/blendsign && \
+             git fetch https://github.com/blendproperty/blendsign.git '$DEPLOY_REF' && \
+             git checkout --detach FETCH_HEAD && \
+             mkdir -p /root/backups && \
+             docker compose exec -T postgres sh -c 'pg_dump -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\"' | gzip > /root/backups/blendsign-predeploy-\$(date +%Y%m%d-%H%M%S).sql.gz && \
+             docker compose build app worker && \
+             docker compose run --rm --no-deps app npx prisma migrate deploy && \
+             docker compose up -d --no-deps --force-recreate app worker && \
+             docker compose ps && \
+             curl --fail --retry 20 --retry-delay 3 https://blendsign.srv938083.hstgr.cloud/api/v1/health"
