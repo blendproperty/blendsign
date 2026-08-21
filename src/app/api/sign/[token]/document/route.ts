@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: { token: string } }
 ) {
   const signer = await prisma.signer.findUnique({
@@ -21,9 +21,17 @@ export async function GET(
 
   try {
     const completed = signer.envelope.status === "COMPLETED" && Boolean(signer.envelope.signedKey);
-    const sourceKey = completed ? signer.envelope.signedKey! : signer.envelope.originalKey;
+    const requestedState = new URL(request.url).searchParams.get("state");
+    if (requestedState === "completed" && !completed) {
+      return NextResponse.json(
+        { error: "The completed signed document is still being prepared." },
+        { status: 409 }
+      );
+    }
+    const serveCompleted = requestedState === "completed" && completed;
+    const sourceKey = serveCompleted ? signer.envelope.signedKey! : signer.envelope.originalKey;
     const source = await getObjectBuffer(sourceKey);
-    const document = completed
+    const document = serveCompleted
       ? source
       : await createUnsignedReviewPdf(source, {
           accentColour: signer.envelope.org.accentColour,
@@ -35,7 +43,7 @@ export async function GET(
       .replace(/^[0-9a-f-]{36}-/i, "")
       .replace(/\.pdf$/i, "")
       .replace(/[^a-zA-Z0-9._-]/g, "_");
-    const filename = `${baseName}${completed ? "-completed" : "-unsigned-review"}.pdf`;
+    const filename = `${baseName}${serveCompleted ? "-completed" : "-unsigned-review"}.pdf`;
 
     return new NextResponse(new Uint8Array(document), {
       headers: {
@@ -44,7 +52,7 @@ export async function GET(
         "Content-Length": String(document.length),
         "Cache-Control": "private, no-store, max-age=0",
         "X-Content-Type-Options": "nosniff",
-        "X-BlendSign-Document-State": completed ? "completed" : "unsigned-review",
+        "X-BlendSign-Document-State": serveCompleted ? "completed" : "unsigned-review",
       },
     });
   } catch (error) {
