@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         })),
       },
       auditEvents: {
-        create: { eventType: "created" },
+        create: { eventType: "created", metadata: { sourceType: "UPLOAD" } },
       },
     },
     include: { signers: true },

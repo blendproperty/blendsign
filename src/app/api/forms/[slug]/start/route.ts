@@ -28,6 +28,8 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     recipients: parsed.data.recipients,
     createdById: signForm.template.createdById,
     title: signForm.name,
+    sourceType: "SIGNFORM",
+    sourceName: signForm.name,
   });
   return NextResponse.json({ signingUrl: `/sign/${result.firstSigner.token}` }, { status: 201 });
 }

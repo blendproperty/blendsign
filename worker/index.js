@@ -24,15 +24,16 @@ async function handleSendSigningLink({ signerId }) {
   const baseUrl = /^https?:\/\//i.test(appDomain) ? appDomain.replace(/\/$/, "") : `https://${appDomain.replace(/\/$/, "")}`;
   const link = `${baseUrl}/sign/${signer.token}`;
 
-  if (signer.email) {
-    await sendSigningLinkEmail({
+  try {
+    if (signer.email) {
+      await sendSigningLinkEmail({
       to: signer.email,
       signerName: signer.name,
       documentTitle: signer.envelope.title,
       link,
       organisation: signer.envelope.org,
-    });
-  } else if (signer.phone) {
+      });
+    } else if (signer.phone) {
     const message = `${signer.name}, ${signer.envelope.org.name} has asked you to sign "${signer.envelope.title}": ${link}`;
     if (process.env.WHATSAPP_BUSINESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_API_VERSION) {
       const response = await fetch(`https://graph.facebook.com/${process.env.WHATSAPP_API_VERSION}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
@@ -46,8 +47,12 @@ async function handleSendSigningLink({ signerId }) {
       const waLink = `https://wa.me/${signer.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
       console.log("WhatsApp delivery (manual fallback):", waLink);
     }
-  } else {
-    console.warn("Signer has no email or phone", signerId);
+    } else {
+      throw new Error("Signer has no email or phone");
+    }
+  } catch (error) {
+    await prisma.auditEvent.create({ data: { envelopeId: signer.envelopeId, signerId, eventType: "delivery_failed", metadata: { message: error instanceof Error ? error.message : String(error) } } });
+    throw error;
   }
 
   await prisma.auditEvent.create({
@@ -126,6 +131,7 @@ async function handleSealDocument({ envelopeId }) {
         },
       });
     } catch (error) {
+      await prisma.auditEvent.create({ data: { envelopeId, signerId: signer.id, eventType: "completed_document_failed", metadata: { email, message: error instanceof Error ? error.message : String(error) } } });
       failures.push(`${email}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -197,8 +203,14 @@ async function handleDeliverWebhook({ envelopeId, event }) {
   });
   await Promise.all(endpoints.map(async (endpoint) => {
     const signature = createHmac("sha256", decryptSecret(endpoint.secretEncrypted)).update(body).digest("hex");
-    const response = await fetch(endpoint.url, { method: "POST", headers: { "content-type": "application/json", "x-blendsign-event": event, "x-blendsign-signature": `sha256=${signature}` }, body, signal: AbortSignal.timeout(10000) });
-    if (!response.ok) throw new Error(`Webhook ${endpoint.id} returned HTTP ${response.status}`);
+    try {
+      const response = await fetch(endpoint.url, { method: "POST", headers: { "content-type": "application/json", "x-blendsign-event": event, "x-blendsign-signature": `sha256=${signature}` }, body, signal: AbortSignal.timeout(10000) });
+      if (!response.ok) throw new Error(`Webhook ${endpoint.id} returned HTTP ${response.status}`);
+      await prisma.auditEvent.create({ data: { envelopeId, eventType: "webhook_delivered", metadata: { endpointId: endpoint.id, event, status: response.status } } });
+    } catch (error) {
+      await prisma.auditEvent.create({ data: { envelopeId, eventType: "webhook_failed", metadata: { endpointId: endpoint.id, event, message: error instanceof Error ? error.message : String(error) } } });
+      throw error;
+    }
   }));
 }
 

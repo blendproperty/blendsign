@@ -22,6 +22,8 @@ export async function createEnvelopeFromTemplate({
   externalSystem,
   externalReference,
   idempotencyKey,
+  sourceType = "TEMPLATE",
+  sourceName,
   data,
 }: {
   template: PreparedTemplate;
@@ -31,6 +33,8 @@ export async function createEnvelopeFromTemplate({
   externalSystem?: string;
   externalReference?: string;
   idempotencyKey?: string;
+  sourceType?: "TEMPLATE" | "SIGNFORM" | "API";
+  sourceName?: string;
   data?: Record<string, string>;
 }) {
   const source = await getObjectBuffer(template.originalKey);
@@ -48,7 +52,7 @@ export async function createEnvelopeFromTemplate({
       idempotencyKey,
       originalKey,
       status: "SENT",
-      auditEvents: { create: { eventType: "created", metadata: { templateId: template.id, templateKey: template.apiIdentifier, templateVersion: template.version, externalSystem, externalReference } } },
+      auditEvents: { create: { eventType: "created", metadata: { sourceType, sourceName, templateId: template.id, templateName: template.name, templateKey: template.apiIdentifier, templateVersion: template.version, externalSystem, externalReference } } },
     },
   });
 

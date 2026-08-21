@@ -893,8 +893,17 @@ Task 2 is complete: a new Stor24-company API key and an active `envelope.complet
 
 Task 3 is complete: Stor24 portal routing merge `acfb8b8` was first deployed successfully by run `32452208716`. Verification run `32455134137` deployed exact portal commit `46b04d9`, built the app/migration images, reported all 22 migrations applied with none pending, recreated the app, passed its container health gate and returned the expected internal health response. An independent public request to `https://stor24-site.srv938083.hstgr.cloud/api/health` returned HTTP 200 with `service: stor24-crm` and `status: ok`. The production build contains `/api/webhooks/blendsign`. No customer or lease record was created during deployment verification.
 
-1. Run disposable end-to-end tests for both routes: card/EFT/other must select the 37-field standard template; debit order must select the 53-field mandate template and require its banking fields. Both must complete Signer 1 then Stor24 Rep, deliver a valid signed webhook, activate the tenancy/occupancy only after completion, store the external envelope ID, and remain idempotent on retry.
-2. Negative-test invalid webhook signatures, unknown merge keys, missing recipient roles and a simulated BlendSign outage; verify failures remain visible and reconcilable without creating duplicate envelopes.
-3. Add secure completed-PDF/certificate retrieval and the Stor24 tenant/lease Documents UI; this remains an implementation gap, not merely a test.
+Task 4 standard-lease UAT reached full signature completion and both recipients received the sealed copy. BlendSign showed `Stor24 lease - unit 104` as `COMPLETED`, but Stor24 left the new account in `DRAFT` without its unit link and unit 104 remained `Reserved`. Task 4 is therefore not complete; the completion-webhook/account-activation defect must be fixed and re-proven before debit-order Task 5 begins.
+
+Two blocking BlendSign improvements were added to the Task 4 remediation scope on 21 August 2026:
+
+- Reports must show document source, template identity/version, recipient sent/viewed/signed timestamps, turnaround stages, current roadblock and matching CSV columns. New audit events record invitation delivery failures, completed-copy delivery failures, and webhook success/failure so operational delays are distinguishable from integration failures.
+- Both Stor24 lease PDFs used legacy split date clauses ending in printed `20__`, which collided with BlendSign's complete date value. Corrected source PDFs replace those clauses with one full-date line; both live templates must be replaced and visually re-tested before UAT resumes.
+
+1. Deploy and verify the reporting enhancement, replace both live template PDFs with the corrected date-clause versions, and repair the Task 4 completion-webhook/account-linking defect.
+2. Re-run the disposable standard-lease path and prove it activates the tenancy/occupancy only after completion, stores the external envelope ID, links the intended unit and remains idempotent on retry.
+3. Run debit-order Task 5: select the 53-field mandate template, require its banking fields, complete Signer 1 then Stor24 Rep, deliver a valid signed webhook and prove the same activation invariants.
+4. Negative-test invalid webhook signatures, unknown merge keys, missing recipient roles and a simulated BlendSign outage; verify failures remain visible and reconcilable without creating duplicate envelopes.
+5. Add secure completed-PDF/certificate retrieval and the Stor24 tenant/lease Documents UI; this remains an implementation gap, not merely a test.
 
 Production customer records must not be used for the first verification. Clean up disposable records only after evidence has been retained.

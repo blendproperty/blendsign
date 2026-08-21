@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         },
       },
       auditEvents: {
-        create: { eventType: "created", metadata: { selfSigned: true } },
+        create: { eventType: "created", metadata: { sourceType: "SELF_SIGN", selfSigned: true } },
       },
     },
     include: { signers: true },
