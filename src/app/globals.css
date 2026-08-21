@@ -823,11 +823,12 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .sign-field--locked .field-input { color: var(--ink); background: #f1efe9; border-color: #c8c3b8; cursor: not-allowed; }
 .sign-field--locked .sign-field-label small { color: #6d675e; font-weight: 700; }
 .bank-selector-stack { display: grid; gap: 9px; }
-.authorised-signing-assets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.authorised-signing-assets { display: grid; grid-template-columns: 1fr; gap: 18px; }
 .authorised-signing-asset { min-width: 0; display: grid; align-content: start; gap: 14px; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .authorised-signing-asset h4 { margin: 0 0 4px; font-size: 15px; }
 .authorised-signing-asset p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
-@media (max-width: 900px) { .authorised-signing-assets { grid-template-columns: 1fr; } }
+.authorised-signing-asset .signature-capture { width: 100%; max-width: none; }
+.authorised-signing-asset .typed-signature-options span { overflow: visible; text-overflow: clip; }
 .signature-capture-error { margin: -5px 20px 17px; color: var(--danger); font-size: 10px; }
 .captured-signature { width: min(100%, 680px); }
 .captured-signature img { display: block; width: 100%; max-height: 230px; object-fit: contain; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
