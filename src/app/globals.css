@@ -835,6 +835,16 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .authorised-signing-preview > div { display: grid; justify-items: start; gap: 10px; }
 .authorised-signing-preview strong { font-size: 12px; }
 @media (max-width: 720px) { .authorised-signing-preview { grid-template-columns: 1fr; } }
+.auto-sign-toggle { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 13px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: #faf9f7; cursor: pointer; }
+.auto-sign-toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.auto-sign-toggle-control { width: 44px; height: 24px; display: flex; align-items: center; padding: 3px; border-radius: 999px; background: #aaa69e; transition: background .18s ease; }
+.auto-sign-toggle-control span { width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .18s ease; }
+.auto-sign-toggle input:checked + .auto-sign-toggle-control { background: var(--brand-accent-dark); }
+.auto-sign-toggle input:checked + .auto-sign-toggle-control span { transform: translateX(20px); }
+.auto-sign-toggle input:focus-visible + .auto-sign-toggle-control { outline: 3px solid color-mix(in srgb, var(--brand-accent-dark) 25%, transparent); outline-offset: 2px; }
+.auto-sign-toggle > span:last-child { display: grid; gap: 4px; }
+.auto-sign-toggle strong { font-size: 12px; }
+.auto-sign-toggle small { color: var(--muted); font-size: 10px; line-height: 1.45; }
 .signature-capture-error { margin: -5px 20px 17px; color: var(--danger); font-size: 10px; }
 .captured-signature { width: min(100%, 680px); }
 .captured-signature img { display: block; width: 100%; max-height: 230px; object-fit: contain; border: 1px solid var(--line); border-radius: 12px; background: #fff; }

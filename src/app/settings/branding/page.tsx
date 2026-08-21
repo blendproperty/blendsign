@@ -109,6 +109,16 @@ export default function BrandingPage() {
 
   if (!organisation) return <div className="settings-loading">Loading company settings…</div>;
   const set = (key: keyof Organisation, value: string) => setOrganisation({ ...organisation, [key]: value });
+  const autoSignReady = signatureConfigured && initialsConfigured && Boolean(organisation.authorisedSignerName?.trim());
+
+  function setAutoSign(enabled: boolean) {
+    if (enabled && !autoSignReady) {
+      setMessage("Enter the authorised representative's full legal name before enabling automatic signing.");
+      return;
+    }
+    setOrganisation((current) => current ? { ...current, autoSignEnabled: enabled } : current);
+    setMessage(enabled ? "Automatic signing selected. Save settings to activate it." : "Automatic signing switched off. Save settings to confirm.");
+  }
 
   return (
     <section className="settings-page">
@@ -189,7 +199,7 @@ export default function BrandingPage() {
                 {initialsConfigured && editingSigningAsset !== "initials" ? <div className="authorised-signing-preview authorised-signing-preview--initials"><img src={`/api/settings/organisation/signing-assets/initials?v=${new Date(organisation.updatedAt).getTime()}`} alt="Stored authorised initials" /><div><strong>Authorised initials saved</strong><button type="button" className="button button--quiet" onClick={() => setEditingSigningAsset("initials")}>Change initials</button></div></div> : <SignatureCapture signerName={organisation.authorisedSignerName || ""} label="initials" onCapture={(dataUrl) => { void saveCapturedSigningAsset("initials", dataUrl); }} />}
               </section>
             </div>
-            <label className="check-label"><input type="checkbox" checked={organisation.autoSignEnabled} disabled={!signatureConfigured || !initialsConfigured || !organisation.authorisedSignerName} onChange={(event) => setOrganisation({ ...organisation, autoSignEnabled: event.target.checked })} /><span>Allow approved integrations to apply this representative’s stored signature and initials automatically</span></label>
+            <label className="auto-sign-toggle"><input type="checkbox" checked={organisation.autoSignEnabled} onChange={(event) => setAutoSign(event.target.checked)} /><span className="auto-sign-toggle-control" aria-hidden="true"><span /></span><span><strong>Automatic company countersigning</strong><small>{autoSignReady ? "Use this representative’s stored signature and initials when an approved integration requests it." : "Enter the authorised representative’s full legal name above to enable this switch."}</small></span></label>
             <div className="legal-note"><Icon name="shield" size={20} /><p>Every automatic signature is attributed to this representative and written to the envelope audit trail. Integrations must request it explicitly per envelope.</p></div>
           </>}
 
