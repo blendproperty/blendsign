@@ -889,10 +889,11 @@ Task 1 is complete: the BlendSign integration is merged and production commit `e
 
 The immediate next stage is:
 
-1. Create a Stor24-owned BlendSign API key, configure it server-side in the Stor24 portal, configure the matching signed webhook URL/secret, and never expose either secret in browser code or logs.
-2. Merge and deploy `codex/blendsign-lease-routing` in `blendproperty/stor24-portal`, including its Prisma migration.
-3. Run disposable end-to-end tests for both routes: card/EFT/other must select the 37-field standard template; debit order must select the 53-field mandate template and require its banking fields. Both must complete Signer 1 then Stor24 Rep, deliver a valid signed webhook, activate the tenancy/occupancy only after completion, store the external envelope ID, and remain idempotent on retry.
-4. Negative-test invalid webhook signatures, unknown merge keys, missing recipient roles and a simulated BlendSign outage; verify failures remain visible and reconcilable without creating duplicate envelopes.
-5. Add secure completed-PDF/certificate retrieval and the Stor24 tenant/lease Documents UI; this remains an implementation gap, not merely a test.
+Task 2 is complete: a new Stor24-company API key and an active `envelope.completed` webhook for `https://stor24-site.srv938083.hstgr.cloud/api/webhooks/blendsign` were created on 21 August 2026. `BLENDSIGN_BASE_URL`, `BLENDSIGN_API_KEY` and `BLENDSIGN_WEBHOOK_SECRET` are stored as encrypted `blendproperty/stor24-portal` repository secrets and were written to `/opt/stor24-crm/.env` by successful configuration run `32454944047`. Secret values were neither logged nor committed. The older Stor24 API key was left intact because its consumers were not established.
+
+1. Verify the merged Stor24 portal routing deployment and Prisma migration in production. The routing branch has already been merged into organisation `main` at `acfb8b8`; do not infer deployment solely from the merge.
+2. Run disposable end-to-end tests for both routes: card/EFT/other must select the 37-field standard template; debit order must select the 53-field mandate template and require its banking fields. Both must complete Signer 1 then Stor24 Rep, deliver a valid signed webhook, activate the tenancy/occupancy only after completion, store the external envelope ID, and remain idempotent on retry.
+3. Negative-test invalid webhook signatures, unknown merge keys, missing recipient roles and a simulated BlendSign outage; verify failures remain visible and reconcilable without creating duplicate envelopes.
+4. Add secure completed-PDF/certificate retrieval and the Stor24 tenant/lease Documents UI; this remains an implementation gap, not merely a test.
 
 Production customer records must not be used for the first verification. Clean up disposable records only after evidence has been retained.
