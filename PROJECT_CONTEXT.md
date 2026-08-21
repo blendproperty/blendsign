@@ -899,6 +899,7 @@ Two blocking BlendSign improvements were added to the Task 4 remediation scope o
 
 - Reports must show document source, template identity/version, recipient sent/viewed/signed timestamps, turnaround stages, current roadblock and matching CSV columns. New audit events record invitation delivery failures, completed-copy delivery failures, and webhook success/failure so operational delays are distinguishable from integration failures.
 - Both Stor24 lease PDFs used legacy split date clauses ending in printed `20__`, which collided with BlendSign's complete date value. Corrected source PDFs replace those clauses with one full-date line; both live templates must be replaced and visually re-tested before UAT resumes.
+- Template PDF replacement now preserves existing field placements and explicitly shows the preserved count for alignment review. Saving is blocked when a replacement has fewer pages than any preserved field, preventing an accidental fieldless or out-of-range revision.
 
 1. Deploy and verify the reporting enhancement, replace both live template PDFs with the corrected date-clause versions, and repair the Task 4 completion-webhook/account-linking defect.
 2. Re-run the disposable standard-lease path and prove it activates the tenancy/occupancy only after completion, stores the external envelope ID, links the intended unit and remains idempotent on retry.
