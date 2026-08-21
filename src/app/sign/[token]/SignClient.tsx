@@ -105,7 +105,7 @@ export default function SignClient({
 
   return (
     <div className="sign-fields">
-      <div className="sign-fields-heading"><p className="eyebrow">Required fields</p><h2>Complete your signing fields</h2><p>Review the PDF, complete each field and provide consent below.</p></div>
+      <div className="sign-fields-heading"><p className="eyebrow">Signing fields</p><h2>Complete your signing fields</h2><p>Review the PDF, complete each field and provide consent below.</p><div className="sign-field-legend"><span className="sign-field-legend-required"><b>*</b> Required</span><span className="sign-field-legend-optional">Optional</span></div></div>
       {captureGroups.map(({ type, fields: captureFields }) => {
         const label = type === "INITIALS" ? "Initials" : "Signature";
         const value = values[captureFields[0].id];
@@ -114,9 +114,9 @@ export default function SignClient({
           ? `Page ${pages[0]}`
           : `Applied to ${captureFields.length} positions on page${pages.length === 1 ? "" : "s"} ${pages.join(", ")}`;
         return (
-          <div className="sign-field sign-field--reusable" key={type}>
+          <div className={`sign-field sign-field--reusable ${captureFields.some((field) => field.required) ? "sign-field--required" : "sign-field--optional"}`} key={type}>
             <div className="sign-field-label">
-            <span>{captureFields[0].label || label}{captureFields.every((field) => !field.required) ? " (optional)" : ""}</span><small>{placementCopy}</small>
+            <span>{captureFields[0].label || label}{captureFields.some((field) => field.required) ? <b className="required-asterisk" aria-label="required">*</b> : <em className="optional-badge">Optional</em>}</span><small>{placementCopy}</small>
             </div>
             {value ? (
               <div className="captured-signature">
@@ -138,18 +138,18 @@ export default function SignClient({
       })}
 
       {otherFields.map((f) => (
-        <div className="sign-field" key={f.id}>
+        <div className={`sign-field ${f.required ? "sign-field--required" : "sign-field--optional"}`} key={f.id}>
           <div className="sign-field-label">
-            <span>{displayLabel(f)}{f.required ? "" : " (optional)"}</span><small>Page {f.page}</small>
+            <span>{displayLabel(f)}{f.required ? <b className="required-asterisk" aria-label="required">*</b> : <em className="optional-badge">Optional</em>}</span><small>Page {f.page}</small>
           </div>
           {f.dataKey === "tenant.city" ? (
-            <select className="field-input" value={values[f.id] || ""} disabled={!f.editableBySigner} onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value, ...(postalField && cityPostalCodes[event.target.value] ? { [postalField.id]: cityPostalCodes[event.target.value] } : {}) }))}>
+            <select className="field-input" aria-required={f.required} value={values[f.id] || ""} disabled={!f.editableBySigner} onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value, ...(postalField && cityPostalCodes[event.target.value] ? { [postalField.id]: cityPostalCodes[event.target.value] } : {}) }))}>
               <option value="">Select city / suburb…</option>
               {values[f.id] && !cityPostalCodes[values[f.id]] ? <option value={values[f.id]}>{values[f.id]}</option> : null}
               {Object.keys(cityPostalCodes).sort().map((city) => <option value={city} key={city}>{city}</option>)}
             </select>
           ) : f.type === "CHECKBOX" ? (
-            <label className="sign-checkbox-field">
+            <label className="sign-checkbox-field" data-required={f.required}>
               <input
                 type="checkbox"
                 checked={values[f.id] === "X"}
@@ -164,6 +164,7 @@ export default function SignClient({
               placeholder="Type here"
               value={values[f.id] || ""}
               readOnly={!f.editableBySigner}
+              aria-required={f.required}
               onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))}
               className="field-input"
             />

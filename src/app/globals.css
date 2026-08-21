@@ -776,11 +776,22 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .sign-fields { max-width: 720px; margin: 0 auto; }
 .sign-fields-heading { margin-bottom: 28px; }
 .sign-fields-heading h2 { margin: 0; font-size: 25px; letter-spacing: -.035em; }
-.sign-fields-heading > p:last-child { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+.sign-fields-heading > p:not(.eyebrow) { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+.sign-field-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+.sign-field-legend span { display: inline-flex; align-items: center; gap: 5px; min-height: 25px; padding: 0 9px; border-radius: 999px; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.sign-field-legend-required { border: 1px solid var(--sign-accent); background: color-mix(in srgb, var(--sign-accent) 12%, #fff); color: var(--sign-primary); }
+.sign-field-legend-required b, .required-asterisk { color: var(--sign-accent); font-style: normal; font-weight: 900; }
+.sign-field-legend-optional { border: 1px solid var(--line); background: #f5f3ef; color: var(--muted); }
 .sign-field { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 24px; padding: 24px 0; border-top: 1px solid var(--line); }
 .sign-field-label { display: flex; flex-direction: column; gap: 5px; padding-top: 8px; }
-.sign-field-label span { font-size: 12px; font-weight: 750; text-transform: capitalize; }
+.sign-field-label span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; font-weight: 750; text-transform: none; }
+.sign-field--required .sign-field-label > span { color: var(--sign-primary); }
+.required-asterisk { margin-left: 1px; font-size: 15px; line-height: 1; }
+.optional-badge { display: inline-flex; align-items: center; min-height: 20px; padding: 0 7px; border: 1px solid var(--line); border-radius: 999px; background: #f5f3ef; color: var(--muted); font-size: 8px; font-style: normal; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .sign-field-label small { color: var(--muted); font-size: 9px; }
+.sign-field--required .field-input { border-color: color-mix(in srgb, var(--sign-accent) 68%, #d5d1c9); border-left-width: 4px; }
+.sign-field--required .field-input:focus { border-color: var(--sign-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sign-accent) 18%, transparent); }
+.sign-field--optional .field-input { border-color: #d5d1c9; background: #fbfaf8; }
 .signature-pad { width: min(100%, 680px); }
 .signature-pad--initials { width: min(100%, 360px); }
 .signature-canvas { display: block; width: 100%; height: auto; background: #fff; border: 1px dashed #898989; border-radius: 12px; touch-action: none; cursor: crosshair; }
@@ -788,6 +799,7 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .signature-actions .button { min-height: 36px; padding: 0 15px; }
 .signature-capture { width: min(100%, 680px); border: 1px solid var(--line); border-radius: 14px; background: #faf9f7; overflow: hidden; }
 .signature-capture--initials { width: min(100%, 520px); }
+.sign-field--required .signature-capture { border-color: color-mix(in srgb, var(--sign-accent) 68%, var(--line)); border-left: 4px solid var(--sign-accent); }
 .signature-method-tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--line); background: #fff; }
 .signature-method-tabs button { min-height: 46px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
 .signature-method-tabs button.is-active { border-bottom-color: var(--sign-accent); color: var(--sign-primary); background: color-mix(in srgb, var(--sign-accent) 8%, #fff); }
@@ -817,6 +829,8 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .capture-confirmation strong { font-size: 11px; }
 .capture-confirmation small { color: var(--muted); font-size: 9px; }
 .sign-checkbox-field { min-height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 13px; border: 1px solid var(--line); border-radius: 9px; background: #fff; font-size: 12px; }
+.sign-field--required .sign-checkbox-field { border-color: color-mix(in srgb, var(--sign-accent) 68%, var(--line)); border-left: 4px solid var(--sign-accent); }
+.sign-field--optional .sign-checkbox-field { background: #fbfaf8; }
 .sign-checkbox-field input { width: 18px; height: 18px; accent-color: var(--sign-accent); }
 .sign-consent { display: flex; align-items: flex-start; gap: 12px; margin: 23px 0; padding: 17px; background: #f2f0eb; color: #514e48; font-size: 11px; line-height: 1.55; }
 .sign-consent input { flex: 0 0 auto; margin-top: 2px; accent-color: var(--sign-accent); }
