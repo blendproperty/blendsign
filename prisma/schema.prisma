@@ -207,6 +207,9 @@ model Envelope {
   createdBy   User           @relation(fields: [createdById], references: [id])
   createdById String
   title       String
+  externalSystem    String?
+  externalReference String?
+  idempotencyKey    String?
   status      EnvelopeStatus @default(DRAFT)
   originalKey String // object storage key for uploaded PDF
   signedKey   String? // object storage key for final sealed PDF
@@ -219,6 +222,9 @@ model Envelope {
   signers     Signer[]
   fields      Field[]
   auditEvents AuditEvent[]
+
+  @@unique([orgId, idempotencyKey])
+  @@index([orgId, externalSystem, externalReference])
 }
 
 enum SignerStatus {

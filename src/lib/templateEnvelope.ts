@@ -19,11 +19,19 @@ export async function createEnvelopeFromTemplate({
   recipients,
   createdById,
   title,
+  externalSystem,
+  externalReference,
+  idempotencyKey,
+  data,
 }: {
   template: PreparedTemplate;
   recipients: RoleRecipient[];
   createdById: string;
   title?: string;
+  externalSystem?: string;
+  externalReference?: string;
+  idempotencyKey?: string;
+  data?: Record<string, string>;
 }) {
   const source = await getObjectBuffer(template.originalKey);
   const safeName = template.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -35,9 +43,12 @@ export async function createEnvelopeFromTemplate({
       orgId: template.orgId,
       createdById,
       title: title?.trim() || template.name,
+      externalSystem,
+      externalReference,
+      idempotencyKey,
       originalKey,
       status: "SENT",
-      auditEvents: { create: { eventType: "created", metadata: { templateId: template.id, templateKey: template.apiIdentifier, templateVersion: template.version } } },
+      auditEvents: { create: { eventType: "created", metadata: { templateId: template.id, templateKey: template.apiIdentifier, templateVersion: template.version, externalSystem, externalReference } } },
     },
   });
 
@@ -75,7 +86,7 @@ export async function createEnvelopeFromTemplate({
       y: field.y,
       width: field.width,
       height: field.height,
-      value: field.defaultValue,
+      value: field.dataKey && data?.[field.dataKey] !== undefined ? data[field.dataKey] : field.defaultValue,
     }))
   );
   if (fields.length) await prisma.field.createMany({ data: fields });

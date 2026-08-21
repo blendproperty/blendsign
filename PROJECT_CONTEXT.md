@@ -540,7 +540,7 @@ curl -sS \
 
 Never place a real API key in source control, screenshots or chat transcripts.
 
-The API currently does not create an envelope from a template. Do not claim that Stor24 automation is complete until the endpoint in section 17 is implemented and tested.
+The branch prepared on 21 August 2026 implements template-based envelope creation. It is code-complete and build-tested locally, but it is not deployed, migrated, configured or live-tested; do not claim Stor24 automation is live until those production steps and both payment paths are verified.
 
 ## 17. Stor24 integration plan
 
@@ -567,9 +567,9 @@ The intended flow is:
 9. Stor24 retrieves the completed PDF and certificate securely.
 10. Stor24 stores the BlendSign reference and displays the files under the tenant or lease Documents section.
 
-### 17.1 Next API endpoint
+### 17.1 Template-envelope API
 
-The next implementation stage should add:
+Implemented on the 21 August 2026 integration branch:
 
 ```text
 POST /api/v1/envelopes/from-template
@@ -609,9 +609,14 @@ The final contract may be refined, but the intended shape is:
   },
   "recipients": [
     {
-      "role": "Tenant",
+      "role": "Signer 1",
       "name": "Example Tenant",
       "email": "tenant@example.test"
+    },
+    {
+      "role": "Stor24 Rep",
+      "name": "Example Stor24 Representative",
+      "email": "representative@example.test"
     }
   ]
 }
@@ -632,16 +637,23 @@ A uniqueness rule should prevent the same company and idempotency key from produ
 
 ### 17.4 Stor24-side work
 
-The Stor24 portal still needs:
+The 21 August 2026 Stor24 portal integration branch now includes:
 
 - A server-only BlendSign API client.
 - Secure environment variables for the base URL and API key.
 - Field mapping from Stor24 tenant, unit and lease records.
 - Storage of the BlendSign envelope ID.
 - A verified webhook receiver.
-- A tenant or lease Documents section.
-- Secure completed-PDF and certificate retrieval.
-- Retry and reconciliation handling.
+- Payment-method routing between `stor24-unit-lease-debit-order` and `stor24-unit-lease`.
+
+Still required before the integration is operational:
+
+- Deploy both repositories and apply both database migrations.
+- Configure the Stor24-owned API key, base URL, matching webhook URL and shared webhook secret.
+- Live-test disposable debit-order and non-debit journeys through both signers and completion.
+- Add a tenant or lease Documents download UI.
+- Add secure completed-PDF and certificate retrieval.
+- Add retry and reconciliation handling.
 
 Do not place the BlendSign API key in browser JavaScript.
 
@@ -879,6 +891,4 @@ Before publishing:
 
 ## 25. Current next step
 
-The immediate next development stage is the secure Stor24 create-from-template API described in section 17.1.
-
-Do not begin by changing the Stor24 website. BlendSign must first expose a tested, company-scoped and idempotent document-generation contract. After that contract is stable, implement the server-side connector and Documents section in `blendproperty/stor24-portal`.
+The immediate next stage is deployment/configuration in a controlled environment followed by disposable end-to-end tests for both template routes. Production customer records must not be used for the first verification. Completed-PDF/certificate retrieval and a Stor24 Documents download surface follow after the send/sign/activate contract is proven.
