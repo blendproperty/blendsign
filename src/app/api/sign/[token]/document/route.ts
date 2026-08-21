@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getObjectBuffer } from "@/lib/storage";
+import { createUnsignedReviewPdf } from "@/lib/unsignedPdfWatermark";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export async function GET(
 ) {
   const signer = await prisma.signer.findUnique({
     where: { token: params.token },
-    include: { envelope: true },
+    include: { envelope: { include: { org: true } } },
   });
 
   if (!signer || signer.envelope.deletedAt) {
@@ -19,9 +20,22 @@ export async function GET(
   }
 
   try {
-    const document = await getObjectBuffer(signer.envelope.originalKey);
-    const storedName = signer.envelope.originalKey.split("/").pop() || "document.pdf";
-    const filename = storedName.replace(/^[0-9a-f-]{36}-/i, "").replace(/[^a-zA-Z0-9._-]/g, "_");
+    const completed = signer.envelope.status === "COMPLETED" && Boolean(signer.envelope.signedKey);
+    const sourceKey = completed ? signer.envelope.signedKey! : signer.envelope.originalKey;
+    const source = await getObjectBuffer(sourceKey);
+    const document = completed
+      ? source
+      : await createUnsignedReviewPdf(source, {
+          accentColour: signer.envelope.org.accentColour,
+          envelopeId: signer.envelope.id,
+          generatedAt: new Date(),
+        });
+    const storedName = sourceKey.split("/").pop() || "document.pdf";
+    const baseName = storedName
+      .replace(/^[0-9a-f-]{36}-/i, "")
+      .replace(/\.pdf$/i, "")
+      .replace(/[^a-zA-Z0-9._-]/g, "_");
+    const filename = `${baseName}${completed ? "-completed" : "-unsigned-review"}.pdf`;
 
     return new NextResponse(new Uint8Array(document), {
       headers: {
@@ -30,6 +44,7 @@ export async function GET(
         "Content-Length": String(document.length),
         "Cache-Control": "private, no-store, max-age=0",
         "X-Content-Type-Options": "nosniff",
+        "X-BlendSign-Document-State": completed ? "completed" : "unsigned-review",
       },
     });
   } catch (error) {
