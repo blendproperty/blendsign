@@ -51,4 +51,4 @@ jobs:
              docker compose run --rm --no-deps app npx prisma migrate deploy && \
              docker compose up -d --no-deps --force-recreate app worker && \
              docker compose ps && \
-             curl --fail --retry 20 --retry-delay 3 https://blendsign.srv938083.hstgr.cloud/api/v1/health"
+             curl --fail --retry 20 --retry-delay 3 https://blendsign.srv938083.hstgr.cloud/login"
