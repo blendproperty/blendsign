@@ -1,5 +1,6 @@
 from io import BytesIO
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
@@ -75,18 +76,32 @@ if __name__ == "__main__":
         line_start=282,
         line_end=434,
     )
-    correct_date_clause(
-        downloads / "Stor24_Lease_Agreement_-_Debit_Order.pdf",
-        output_dir / "Stor24_Lease_Agreement_Debit_Order_Date_Corrected.pdf",
-        6,
-        x=200,
-        y=708,
-        box_width=172,
-        box_height=25,
-        baseline=713,
-        line_start=218,
-        line_end=368,
-    )
+    with TemporaryDirectory(prefix="stor24-debit-pdf-") as temporary_dir:
+        assignment_corrected = Path(temporary_dir) / "assignment-date-corrected.pdf"
+        correct_date_clause(
+            downloads / "Stor24_Lease_Agreement_-_Debit_Order.pdf",
+            assignment_corrected,
+            6,
+            x=200,
+            y=708,
+            box_width=172,
+            box_height=25,
+            baseline=713,
+            line_start=218,
+            line_end=368,
+        )
+        correct_date_clause(
+            assignment_corrected,
+            output_dir / "Stor24_Lease_Agreement_Debit_Order_Date_Corrected.pdf",
+            7,
+            x=258,
+            y=538,
+            box_width=180,
+            box_height=30,
+            baseline=548,
+            line_start=282,
+            line_end=434,
+        )
     simplify_primary_phone(
         output_dir / "Stor24_Lease_Agreement_Date_Corrected.pdf",
         output_dir / "Stor24_Lease_Agreement_Signing_Updated.pdf",
