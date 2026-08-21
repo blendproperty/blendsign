@@ -7,6 +7,7 @@ type Field = {
   id: string;
   type: "SIGNATURE" | "INITIALS" | "DATE" | "TEXT" | "CHECKBOX";
   label: string | null;
+  dataKey: string | null;
   required: boolean;
   editableBySigner: boolean;
   value: string | null;
@@ -39,8 +40,16 @@ export default function SignClient({
   const captureGroups = Array.from(
     new Set(fields.filter((field) => field.type === "SIGNATURE" || field.type === "INITIALS").map((field) => field.type))
   ).map((type) => ({ type, fields: fields.filter((field) => field.type === type) }));
-  const otherFields = fields.filter((field) => field.type !== "SIGNATURE" && field.type !== "INITIALS");
+  const priority: Record<string, number> = { "tenant.phone": 10, "tenant.address": 20, "tenant.city": 30, "tenant.postalCode": 40 };
+  const otherFields = fields.filter((field) => field.type !== "SIGNATURE" && field.type !== "INITIALS").sort((a, b) => (priority[a.dataKey || ""] ?? 100) - (priority[b.dataKey || ""] ?? 100));
   const allFilled = fields.every((field) => !field.required || values[field.id]);
+  const postalField = fields.find((field) => field.dataKey === "tenant.postalCode");
+  const cityPostalCodes: Record<string, string> = { Alberton: "1449", Benoni: "1501", Bloemfontein: "9301", "Cape Town": "8001", Centurion: "0157", Durban: "4001", "East London": "5201", George: "6529", Gqeberha: "6001", Johannesburg: "2000", Kimberley: "8301", Midrand: "1685", Mbombela: "1200", Paarl: "7646", Pietermaritzburg: "3201", Polokwane: "0700", Pretoria: "0002", Randburg: "2194", Rustenburg: "0300", Sandton: "2196", Soweto: "1804", Stellenbosch: "7600" };
+  const displayLabel = (field: Field) => {
+    if (field.dataKey === "lease.signedAt" || field.dataKey === "debitOrder.signedAt") return "Signed at (town/city where you are signing)";
+    if ((field.label || "").toLowerCase().includes("final execution date")) return "Final execution date (date Stor24 countersigns and completes the agreement)";
+    return field.label || field.type.toLowerCase();
+  };
 
   function applyCapture(captureFields: Field[], value: string) {
     setValues((current) => ({
@@ -131,9 +140,15 @@ export default function SignClient({
       {otherFields.map((f) => (
         <div className="sign-field" key={f.id}>
           <div className="sign-field-label">
-            <span>{f.label || f.type.toLowerCase()}{f.required ? "" : " (optional)"}</span><small>Page {f.page}</small>
+            <span>{displayLabel(f)}{f.required ? "" : " (optional)"}</span><small>Page {f.page}</small>
           </div>
-          {f.type === "CHECKBOX" ? (
+          {f.dataKey === "tenant.city" ? (
+            <select className="field-input" value={values[f.id] || ""} disabled={!f.editableBySigner} onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value, ...(postalField && cityPostalCodes[event.target.value] ? { [postalField.id]: cityPostalCodes[event.target.value] } : {}) }))}>
+              <option value="">Select city / suburb…</option>
+              {values[f.id] && !cityPostalCodes[values[f.id]] ? <option value={values[f.id]}>{values[f.id]}</option> : null}
+              {Object.keys(cityPostalCodes).sort().map((city) => <option value={city} key={city}>{city}</option>)}
+            </select>
+          ) : f.type === "CHECKBOX" ? (
             <label className="sign-checkbox-field">
               <input
                 type="checkbox"

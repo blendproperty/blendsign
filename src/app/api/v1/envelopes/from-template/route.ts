@@ -13,6 +13,7 @@ const requestSchema = z.object({
     role: z.string().trim().min(1).max(120),
     name: z.string().trim().min(2).max(160),
     email: z.string().email(),
+    autoSign: z.boolean().optional().default(false),
   })).min(1),
 });
 
@@ -70,7 +71,18 @@ export async function POST(request: NextRequest) {
     roleId: roleByName.get(recipient.role.toLowerCase())!.id,
     name: recipient.name,
     email: recipient.email,
+    autoSign: recipient.autoSign,
   }));
+
+  if (recipients.some((recipient) => recipient.autoSign)) {
+    const organisation = await prisma.org.findUnique({ where: { id: apiKey.orgId }, select: { autoSignEnabled: true, signatureKey: true, initialsKey: true, authorisedSignerName: true } });
+    if (!organisation?.autoSignEnabled || !organisation.signatureKey || !organisation.initialsKey || !organisation.authorisedSignerName) {
+      return NextResponse.json({ error: "Authorised company auto-signing is not fully configured or enabled." }, { status: 409 });
+    }
+    if (recipients.filter((recipient) => recipient.autoSign).length > 1) {
+      return NextResponse.json({ error: "Only one authorised company recipient may auto-sign an envelope." }, { status: 400 });
+    }
+  }
 
   try {
     const result = await createEnvelopeFromTemplate({

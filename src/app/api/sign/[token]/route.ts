@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { enqueueSealDocument, enqueueSendSigningLink, enqueueWebhookEvent } from "@/lib/queue";
+import { applyAuthorisedCompanySignature } from "@/lib/authorisedSigning";
 
 const submitSchema = z.object({
   fields: z.array(z.object({ fieldId: z.string(), value: z.string().min(1).max(2_000_000) })).max(300),
@@ -110,10 +111,21 @@ export async function POST(
   });
   await enqueueWebhookEvent(signer.envelopeId, "envelope.signed");
 
-  const allSigners = await prisma.signer.findMany({
+  let allSigners = await prisma.signer.findMany({
     where: { envelopeId: signer.envelopeId },
   });
-  const stillPending = allSigners.filter((s) => s.status !== "SIGNED");
+  let stillPending = allSigners.filter((s) => s.status !== "SIGNED");
+
+  while (stillPending.length) {
+    const nextOrder = Math.min(...stillPending.map((s) => s.order));
+    const nextTier = stillPending.filter((s) => s.order === nextOrder);
+    if (!nextTier.length || nextTier.some((s) => !s.autoSign)) break;
+    const applied = await Promise.all(nextTier.map((s) => applyAuthorisedCompanySignature(s.id)));
+    if (applied.some((value) => !value)) break;
+    await Promise.all(nextTier.map((s) => enqueueWebhookEvent(s.envelopeId, "envelope.signed")));
+    allSigners = await prisma.signer.findMany({ where: { envelopeId: signer.envelopeId } });
+    stillPending = allSigners.filter((s) => s.status !== "SIGNED");
+  }
 
   if (stillPending.length === 0) {
     // everyone's signed — flatten, hash, and seal the final document

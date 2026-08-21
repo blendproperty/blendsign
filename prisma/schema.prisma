@@ -25,6 +25,11 @@ model Org {
   accentColour     String            @default("#229D6C")
   emailFromName    String?
   emailFromAddress String?
+  authorisedSignerName  String?
+  authorisedSignerTitle String?
+  signatureKey          String?
+  initialsKey           String?
+  autoSignEnabled       Boolean           @default(false)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @default(now()) @updatedAt
   defaultUsers     User[]            @relation("DefaultOrg")
@@ -246,6 +251,7 @@ model Signer {
   status         SignerStatus @default(PENDING)
   signedAt       DateTime?
   declinedReason String?
+  autoSign       Boolean      @default(false)
 
   fields      Field[]
   auditEvents AuditEvent[]

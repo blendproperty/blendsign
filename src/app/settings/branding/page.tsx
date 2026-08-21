@@ -21,6 +21,9 @@ type Organisation = {
   accentColour: string;
   emailFromName: string | null;
   emailFromAddress: string | null;
+  authorisedSignerName: string | null;
+  authorisedSignerTitle: string | null;
+  autoSignEnabled: boolean;
   updatedAt: string;
 };
 
@@ -29,11 +32,13 @@ export default function BrandingPage() {
   const [section, setSection] = useState("organisation");
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [signatureConfigured, setSignatureConfigured] = useState(false);
+  const [initialsConfigured, setInitialsConfigured] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings/organisation")
       .then((response) => response.json())
-      .then((data) => setOrganisation(data.organisation));
+      .then((data) => { setOrganisation(data.organisation); setSignatureConfigured(Boolean(data.signatureConfigured)); setInitialsConfigured(Boolean(data.initialsConfigured)); });
   }, []);
 
   const displayedLogo = useMemo(() => {
@@ -80,6 +85,16 @@ export default function BrandingPage() {
     setMessage("Company logo removed.");
   }
 
+  async function uploadSigningAsset(kind: "signature" | "initials", file: File | null) {
+    if (!file) return;
+    setUploading(true); setMessage(`Uploading authorised ${kind}…`);
+    const response = await fetch(`/api/settings/organisation/signing-assets/${kind}`, { method: "POST", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
+    const data = await response.json(); setUploading(false);
+    if (!response.ok) return setMessage(data.error || `The ${kind} could not be uploaded.`);
+    setOrganisation(data.organisation); setSignatureConfigured(Boolean(data.signatureConfigured)); setInitialsConfigured(Boolean(data.initialsConfigured));
+    setMessage(`Authorised ${kind} uploaded. Auto-signing remains disabled until explicitly enabled.`);
+  }
+
   if (!organisation) return <div className="settings-loading">Loading company settings…</div>;
   const set = (key: keyof Organisation, value: string) => setOrganisation({ ...organisation, [key]: value });
 
@@ -93,6 +108,7 @@ export default function BrandingPage() {
         <nav className="branding-nav">
           <button type="button" className={section === "organisation" ? "is-active" : ""} onClick={() => setSection("organisation")}>Organisation details</button>
           <button type="button" className={section === "identity" ? "is-active" : ""} onClick={() => setSection("identity")}>Visual identity</button>
+          <button type="button" className={section === "signing" ? "is-active" : ""} onClick={() => setSection("signing")}>Authorised signing</button>
           <button type="button" className={section === "legal" ? "is-active" : ""} onClick={() => setSection("legal")}>Legal disclosure</button>
           <button type="button" className={section === "domain" ? "is-active" : ""} onClick={() => setSection("domain")}>Custom domain</button>
         </nav>
@@ -143,6 +159,20 @@ export default function BrandingPage() {
             <div className="form-section-title"><h3>Legal disclosure</h3><p>Shown before recipients consent to electronic signing.</p></div>
             <label className="field-label">Custom legal disclosure<textarea className="field-input field-textarea" rows={10} value={organisation.legalDisclosure || ""} onChange={(event) => set("legalDisclosure", event.target.value)} placeholder="By selecting Accept and Sign, I consent to use electronic records and electronic signatures…" /></label>
             <div className="legal-note"><Icon name="shield" size={20} /><p>Keep wording appropriate for the Electronic Communications and Transactions Act and your company’s legal requirements.</p></div>
+          </>}
+
+          {section === "signing" && <>
+            <div className="form-section-title"><h3>Authorised company signing</h3><p>Store the authorised representative’s signing assets for audited countersigning. Uploading or replacing either image disables automation until it is reviewed and enabled again.</p></div>
+            <div className="form-grid">
+              <label className="field-label">Authorised representative<input className="field-input" value={organisation.authorisedSignerName || ""} onChange={(event) => set("authorisedSignerName", event.target.value)} placeholder="Full legal name" /></label>
+              <label className="field-label">Position / title<input className="field-input" value={organisation.authorisedSignerTitle || ""} onChange={(event) => set("authorisedSignerTitle", event.target.value)} placeholder="Authorised representative" /></label>
+            </div>
+            <div className="brand-logo-row">
+              <label className={`brand-logo-upload ${uploading ? "is-uploading" : ""}`}><input type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading} onChange={(event) => { uploadSigningAsset("signature", event.target.files?.[0] || null); event.currentTarget.value = ""; }} /><Icon name="upload" size={21} /><span><strong>{signatureConfigured ? "Replace authorised signature" : "Upload authorised signature"}</strong><small>{signatureConfigured ? "Signature configured" : "PNG, JPG or WebP. Maximum 2 MB."}</small></span></label>
+              <label className={`brand-logo-upload ${uploading ? "is-uploading" : ""}`}><input type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading} onChange={(event) => { uploadSigningAsset("initials", event.target.files?.[0] || null); event.currentTarget.value = ""; }} /><Icon name="upload" size={21} /><span><strong>{initialsConfigured ? "Replace authorised initials" : "Upload authorised initials"}</strong><small>{initialsConfigured ? "Initials configured" : "PNG, JPG or WebP. Maximum 2 MB."}</small></span></label>
+            </div>
+            <label className="check-label"><input type="checkbox" checked={organisation.autoSignEnabled} disabled={!signatureConfigured || !initialsConfigured || !organisation.authorisedSignerName} onChange={(event) => setOrganisation({ ...organisation, autoSignEnabled: event.target.checked })} /><span>Allow approved integrations to apply this representative’s stored signature and initials automatically</span></label>
+            <div className="legal-note"><Icon name="shield" size={20} /><p>Every automatic signature is attributed to this representative and written to the envelope audit trail. Integrations must request it explicitly per envelope.</p></div>
           </>}
 
           {section === "domain" && <>

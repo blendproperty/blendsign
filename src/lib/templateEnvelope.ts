@@ -12,6 +12,7 @@ type RoleRecipient = {
   roleId: string;
   name: string;
   email: string;
+  autoSign?: boolean;
 };
 
 export async function createEnvelopeFromTemplate({
@@ -70,6 +71,7 @@ export async function createEnvelopeFromTemplate({
         email: recipient.email,
         order: role.order,
         token: randomBytes(24).toString("hex"),
+        autoSign: Boolean(recipient.autoSign),
       },
     });
     signerByRole.set(role.id, signer.id);
