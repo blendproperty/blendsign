@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { canAdminister, getRequestContext } from "@/lib/account";
 import { prisma } from "@/lib/prisma";
-import { deleteObject, putObjectBuffer } from "@/lib/storage";
+import { deleteObject, getObjectBuffer, putObjectBuffer } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -17,6 +17,35 @@ function keyField(kind: string) {
   if (kind === "signature") return "signatureKey" as const;
   if (kind === "initials") return "initialsKey" as const;
   return null;
+}
+
+function contentTypeForKey(key: string) {
+  if (key.toLowerCase().endsWith(".jpg") || key.toLowerCase().endsWith(".jpeg")) return "image/jpeg";
+  if (key.toLowerCase().endsWith(".webp")) return "image/webp";
+  return "image/png";
+}
+
+export async function GET(_request: NextRequest, { params }: { params: { kind: string } }) {
+  const context = await getRequestContext();
+  if (!context) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  if (!canAdminister(context)) return NextResponse.json({ error: "Administrator access is required." }, { status: 403 });
+  const field = keyField(params.kind);
+  if (!field) return NextResponse.json({ error: "Unknown signing asset." }, { status: 404 });
+  const key = context.org[field];
+  if (!key) return NextResponse.json({ error: "Signing asset not configured." }, { status: 404 });
+  try {
+    const file = await getObjectBuffer(key);
+    return new NextResponse(new Uint8Array(file), {
+      headers: {
+        "Content-Type": contentTypeForKey(key),
+        "Cache-Control": "private, no-store",
+        "Content-Disposition": "inline",
+      },
+    });
+  } catch (error) {
+    console.error("Authorised signing asset preview failed", error);
+    return NextResponse.json({ error: "The signing image could not be loaded." }, { status: 502 });
+  }
 }
 
 export async function POST(request: NextRequest, { params }: { params: { kind: string } }) {

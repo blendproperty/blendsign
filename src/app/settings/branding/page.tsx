@@ -35,6 +35,7 @@ export default function BrandingPage() {
   const [uploading, setUploading] = useState(false);
   const [signatureConfigured, setSignatureConfigured] = useState(false);
   const [initialsConfigured, setInitialsConfigured] = useState(false);
+  const [editingSigningAsset, setEditingSigningAsset] = useState<"signature" | "initials" | null>(null);
 
   useEffect(() => {
     fetch("/api/settings/organisation")
@@ -93,6 +94,7 @@ export default function BrandingPage() {
     const data = await response.json(); setUploading(false);
     if (!response.ok) return setMessage(data.error || `The ${kind} could not be uploaded.`);
     setOrganisation(data.organisation); setSignatureConfigured(Boolean(data.signatureConfigured)); setInitialsConfigured(Boolean(data.initialsConfigured));
+    setEditingSigningAsset(null);
     setMessage(`Authorised ${kind} uploaded. Auto-signing remains disabled until explicitly enabled.`);
   }
 
@@ -180,11 +182,11 @@ export default function BrandingPage() {
             <div className="authorised-signing-assets">
               <section className="authorised-signing-asset">
                 <div><h4>Authorised signature</h4><p>{signatureConfigured ? "Signature configured. Creating another will replace it." : "Choose Type, Draw or Upload to create the stored signature."}</p></div>
-                <SignatureCapture signerName={organisation.authorisedSignerName || ""} label="signature" onCapture={(dataUrl) => { void saveCapturedSigningAsset("signature", dataUrl); }} />
+                {signatureConfigured && editingSigningAsset !== "signature" ? <div className="authorised-signing-preview"><img src={`/api/settings/organisation/signing-assets/signature?v=${new Date(organisation.updatedAt).getTime()}`} alt="Stored authorised signature" /><div><strong>Authorised signature saved</strong><button type="button" className="button button--quiet" onClick={() => setEditingSigningAsset("signature")}>Change signature</button></div></div> : <SignatureCapture signerName={organisation.authorisedSignerName || ""} label="signature" onCapture={(dataUrl) => { void saveCapturedSigningAsset("signature", dataUrl); }} />}
               </section>
               <section className="authorised-signing-asset">
                 <div><h4>Authorised initials</h4><p>{initialsConfigured ? "Initials configured. Creating another will replace them." : "Choose Type, Draw or Upload to create the stored initials."}</p></div>
-                <SignatureCapture signerName={organisation.authorisedSignerName || ""} label="initials" onCapture={(dataUrl) => { void saveCapturedSigningAsset("initials", dataUrl); }} />
+                {initialsConfigured && editingSigningAsset !== "initials" ? <div className="authorised-signing-preview authorised-signing-preview--initials"><img src={`/api/settings/organisation/signing-assets/initials?v=${new Date(organisation.updatedAt).getTime()}`} alt="Stored authorised initials" /><div><strong>Authorised initials saved</strong><button type="button" className="button button--quiet" onClick={() => setEditingSigningAsset("initials")}>Change initials</button></div></div> : <SignatureCapture signerName={organisation.authorisedSignerName || ""} label="initials" onCapture={(dataUrl) => { void saveCapturedSigningAsset("initials", dataUrl); }} />}
               </section>
             </div>
             <label className="check-label"><input type="checkbox" checked={organisation.autoSignEnabled} disabled={!signatureConfigured || !initialsConfigured || !organisation.authorisedSignerName} onChange={(event) => setOrganisation({ ...organisation, autoSignEnabled: event.target.checked })} /><span>Allow approved integrations to apply this representative’s stored signature and initials automatically</span></label>
