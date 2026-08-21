@@ -18,6 +18,10 @@ function clientIp(req: NextRequest) {
   );
 }
 
+function signingDateToday() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Johannesburg", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
 // GET — fetch what the signer needs to render the page (envelope, their
 // fields, doc key for viewer). Marks the signer as VIEWED on first load.
 export async function GET(
@@ -75,10 +79,11 @@ export async function POST(
 
   const assignedFields = await prisma.field.findMany({
     where: { signerId: signer.id },
-    select: { id: true, dataKey: true, required: true, editableBySigner: true, value: true },
+    select: { id: true, type: true, dataKey: true, required: true, editableBySigner: true, value: true },
   });
   const assignedById = new Map(assignedFields.map((field) => [field.id, field]));
-  const submittedById = new Map(parsed.data.fields.map((field) => [field.fieldId, field.value]));
+  const normalisedFields = parsed.data.fields.map((field) => ({ ...field, value: assignedById.get(field.fieldId)?.type === "DATE" ? signingDateToday() : field.value }));
+  const submittedById = new Map(normalisedFields.map((field) => [field.fieldId, field.value]));
   if (submittedById.size !== parsed.data.fields.length || parsed.data.fields.some((field) => !assignedById.has(field.fieldId))) {
     return NextResponse.json({ error: "A submitted field does not belong to this signer." }, { status: 400 });
   }
@@ -88,9 +93,13 @@ export async function POST(
   if (assignedFields.some((field) => (!field.editableBySigner || (signer.envelope.externalSystem === "stor24" && isStor24ControlledField(field.dataKey))) && submittedById.has(field.id) && submittedById.get(field.id) !== field.value)) {
     return NextResponse.json({ error: "A pre-filled field cannot be changed." }, { status: 400 });
   }
+  const repeatedKeys = new Set(assignedFields.map((field) => field.dataKey).filter((key): key is string => Boolean(key)));
+  if (Array.from(repeatedKeys).some((key) => new Set(assignedFields.filter((field) => field.dataKey === key).map((field) => submittedById.get(field.id) || field.value || "")).size > 1)) {
+    return NextResponse.json({ error: "Matching PDF fields must contain the same value." }, { status: 400 });
+  }
 
   await Promise.all(
-    parsed.data.fields.map((f) =>
+    normalisedFields.map((f) =>
       prisma.field.update({ where: { id: f.fieldId }, data: { value: f.value } })
     )
   );

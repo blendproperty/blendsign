@@ -53,6 +53,30 @@ const universalCodeByBank = Object.fromEntries(
   southAfricanBanks.flatMap((bank) => (bank.code ? [[bank.name, bank.code]] : []))
 ) as Record<string, string>;
 
+function signingDateToday() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Johannesburg", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
+function initialFieldValues(fields: Field[]) {
+  const values: Record<string, string> = {};
+  const valueByKey = new Map<string, string>();
+  fields.forEach((field) => {
+    if (field.dataKey && field.value) valueByKey.set(field.dataKey, field.value);
+  });
+  const customerName = valueByKey.get("tenant.fullName") || "";
+  fields.forEach((field) => {
+    const value = field.type === "DATE"
+      ? signingDateToday()
+      : field.dataKey === "tenant.contactPerson" && !field.value
+        ? customerName
+        : field.dataKey
+          ? valueByKey.get(field.dataKey) || field.value || ""
+          : field.value || "";
+    if (value) values[field.id] = value;
+  });
+  return values;
+}
+
 export default function SignClient({
   token,
   fields,
@@ -66,7 +90,7 @@ export default function SignClient({
   legalDisclosure?: string;
   signerName: string;
 }) {
-  const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.filter((field) => field.value).map((field) => [field.id, field.value!])))
+  const [values, setValues] = useState<Record<string, string>>(() => initialFieldValues(fields));
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -77,7 +101,10 @@ export default function SignClient({
     new Set(fields.filter((field) => field.type === "SIGNATURE" || field.type === "INITIALS").map((field) => field.type))
   ).map((type) => ({ type, fields: fields.filter((field) => field.type === type) }));
   const priority: Record<string, number> = { "tenant.phone": 10, "tenant.address": 20, "tenant.city": 30, "tenant.postalCode": 40 };
-  const otherFields = fields.filter((field) => field.type !== "SIGNATURE" && field.type !== "INITIALS").sort((a, b) => (priority[a.dataKey || ""] ?? 100) - (priority[b.dataKey || ""] ?? 100));
+  const otherFields = fields
+    .filter((field) => field.type !== "SIGNATURE" && field.type !== "INITIALS")
+    .filter((field, index, candidates) => !field.dataKey || candidates.findIndex((candidate) => candidate.dataKey === field.dataKey) === index)
+    .sort((a, b) => (priority[a.dataKey || ""] ?? 100) - (priority[b.dataKey || ""] ?? 100));
   const allFilled = fields.every((field) => !field.required || values[field.id]) && fields.every((field) => field.dataKey !== "debitOrder.branchCode" || !values[field.id] || /^\d{6}$/.test(values[field.id]));
   const postalField = fields.find((field) => field.dataKey === "tenant.postalCode");
   const branchCodeField = fields.find((field) => field.dataKey === "debitOrder.branchCode");
@@ -85,6 +112,8 @@ export default function SignClient({
   const displayLabel = (field: Field) => {
     if (field.dataKey === "lease.signedAt" || field.dataKey === "debitOrder.signedAt") return "Signed at (town/city where you are signing)";
     if ((field.label || "").toLowerCase().includes("final execution date")) return "Final execution date (date Stor24 countersigns and completes the agreement)";
+    if (field.type === "DATE" && /storer signing date|storer date/.test((field.label || "").toLowerCase())) return "Your signing date (today)";
+    if (field.type === "DATE" && /debit mandate signature date/.test((field.label || "").toLowerCase())) return "Debit mandate signing date (today)";
     return field.label || field.type.toLowerCase();
   };
 
@@ -101,6 +130,11 @@ export default function SignClient({
       captureFields.forEach((field) => delete next[field.id]);
       return next;
     });
+  }
+
+  function setFieldValue(field: Field, value: string) {
+    const matching = field.dataKey ? fields.filter((candidate) => candidate.dataKey === field.dataKey) : [field];
+    setValues((current) => ({ ...current, ...Object.fromEntries(matching.map((candidate) => [candidate.id, value])) }));
   }
 
   async function submit() {
@@ -175,9 +209,9 @@ export default function SignClient({
       })}
 
       {otherFields.map((f) => (
-        <div className={`sign-field ${f.required ? "sign-field--required" : "sign-field--optional"} ${!f.editableBySigner ? "sign-field--locked" : ""}`} key={f.id}>
+        <div className={`sign-field ${f.required ? "sign-field--required" : "sign-field--optional"} ${!f.editableBySigner || f.type === "DATE" ? "sign-field--locked" : ""}`} key={f.id}>
           <div className="sign-field-label">
-            <span>{displayLabel(f)}{f.required ? <b className="required-asterisk" aria-label="required">*</b> : <em className="optional-badge">Optional</em>}</span><small>Page {f.page}{!f.editableBySigner ? " · Locked by Stor24" : ""}</small>
+            <span>{displayLabel(f)}{f.required ? <b className="required-asterisk" aria-label="required">*</b> : <em className="optional-badge">Optional</em>}</span><small>{f.dataKey && fields.filter((candidate) => candidate.dataKey === f.dataKey).length > 1 ? `Automatically fills all matching PDF positions` : `Page ${f.page}`}{f.type === "DATE" ? " · Set to today's signing date" : !f.editableBySigner ? " · Locked by Stor24" : ""}</small>
           </div>
           {f.dataKey === "debitOrder.bankName" ? (
             <div className="bank-selector-stack"><select className="field-input" aria-required={f.required} value={otherBankSelected ? "__other" : values[f.id] || ""} onChange={(event) => { const bank = event.target.value; const other = bank === "__other"; setOtherBankSelected(other); setValues((current) => ({ ...current, [f.id]: other ? "" : bank, ...(branchCodeField ? { [branchCodeField.id]: other ? "" : universalCodeByBank[bank] || "" } : {}) })); }}><option value="">Select a South African bank…</option>{southAfricanBanks.map((bank) => <option value={bank.name} key={bank.name}>{bank.name}</option>)}<option value="__other">Other bank</option></select>{otherBankSelected ? <input className="field-input" placeholder="Enter bank name" value={values[f.id] || ""} aria-required="true" onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value }))} /> : null}</div>
@@ -210,9 +244,9 @@ export default function SignClient({
               type={f.type === "DATE" ? "date" : "text"}
               placeholder="Type here"
               value={values[f.id] || ""}
-              readOnly={!f.editableBySigner}
+              readOnly={!f.editableBySigner || f.type === "DATE"}
               aria-required={f.required}
-              onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))}
+              onChange={(e) => setFieldValue(f, e.target.value)}
               className="field-input"
             />
           )}
