@@ -8,8 +8,8 @@ const connection = new IORedis(
 
 export const blendsignQueue = new Queue("blendsign", { connection });
 
-export async function enqueueSendSigningLink(signerId: string) {
-  await blendsignQueue.add("send-signing-link", { signerId });
+export async function enqueueSendSigningLink(signerId: string, jobId?: string) {
+  await blendsignQueue.add("send-signing-link", { signerId }, jobId ? { jobId } : undefined);
 }
 
 export async function enqueueSealDocument(envelopeId: string) {
