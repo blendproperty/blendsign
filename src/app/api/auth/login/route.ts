@@ -3,7 +3,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { authIsConfigured, createSessionToken, SESSION_COOKIE } from "@/lib/auth";
 import { ensureDefaultAccount } from "@/lib/account";
-import { verifyPassword } from "@/lib/password";
+import { verifyPassword, timingSafeEqualString } from "@/lib/password";
+import { clientIp } from "@/lib/clientIp";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const inputSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
@@ -11,12 +13,16 @@ export async function POST(request: NextRequest) {
   if (!authIsConfigured()) {
     return NextResponse.json({ error: "Admin authentication is not configured on the server." }, { status: 503 });
   }
+  const allowed = await checkRateLimit(`login:${clientIp(request)}`, 10, 15 * 60);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many login attempts. Try again in a few minutes." }, { status: 429 });
+  }
   const parsed = inputSchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Enter a valid email address and password." }, { status: 400 });
   const email = parsed.data.email.toLowerCase();
   let userId = "";
   let superAdmin = false;
-  if (email === process.env.ADMIN_EMAIL?.toLowerCase() && parsed.data.password === process.env.ADMIN_PASSWORD) {
+  if (email === process.env.ADMIN_EMAIL?.toLowerCase() && timingSafeEqualString(parsed.data.password, process.env.ADMIN_PASSWORD || "")) {
     const { user } = await ensureDefaultAccount();
     userId = user.id;
     superAdmin = true;

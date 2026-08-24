@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getRequestContext } from "@/lib/account";
 import { prisma } from "@/lib/prisma";
 import { enqueueSealDocument, enqueueWebhookEvent } from "@/lib/queue";
+import { clientIp } from "@/lib/clientIp";
 
 const selfSignSchema = z.object({
   title: z.string().trim().min(1).max(160),
@@ -19,10 +20,6 @@ const selfSignSchema = z.object({
   })).min(1).max(300),
   consent: z.literal(true),
 });
-
-function clientIp(request: NextRequest) {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
-}
 
 export async function POST(request: NextRequest) {
   const context = await getRequestContext();

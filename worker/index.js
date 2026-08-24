@@ -7,6 +7,7 @@ const { prisma } = require("./lib/prisma");
 const { getObjectBuffer, putObjectBuffer } = require("./lib/storage");
 const { flattenEnvelope, sha256Hex } = require("./lib/pdf");
 const { sendSigningLinkEmail, sendCompletedDocumentEmail } = require("./lib/mail");
+const { assertPublicWebhookTarget } = require("./lib/ssrfGuard");
 const { createDecipheriv, createHash, createHmac } = require("crypto");
 
 const connection = new IORedis(process.env.REDIS_URL || "redis://redis:6379", {
@@ -204,6 +205,7 @@ async function handleDeliverWebhook({ envelopeId, event }) {
   await Promise.all(endpoints.map(async (endpoint) => {
     const signature = createHmac("sha256", decryptSecret(endpoint.secretEncrypted)).update(body).digest("hex");
     try {
+      await assertPublicWebhookTarget(endpoint.url);
       const response = await fetch(endpoint.url, { method: "POST", headers: { "content-type": "application/json", "x-blendsign-event": event, "x-blendsign-signature": `sha256=${signature}` }, body, signal: AbortSignal.timeout(10000) });
       if (!response.ok) throw new Error(`Webhook ${endpoint.id} returned HTTP ${response.status}`);
       await prisma.auditEvent.create({ data: { envelopeId, eventType: "webhook_delivered", metadata: { endpointId: endpoint.id, event, status: response.status } } });

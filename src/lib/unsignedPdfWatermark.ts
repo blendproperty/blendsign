@@ -20,7 +20,10 @@ export async function createUnsignedReviewPdf(
   original: Buffer,
   options: UnsignedWatermarkOptions
 ) {
-  const pdf = await PDFDocument.load(original);
+  // ignoreEncryption: many scanner/export PDFs carry an empty-password,
+  // permissions-only encryption dictionary that pdf-lib would otherwise
+  // refuse to load.
+  const pdf = await PDFDocument.load(original, { ignoreEncryption: true });
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const accent = colourFromHex(options.accentColour);

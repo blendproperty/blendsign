@@ -4,6 +4,7 @@ import { z } from "zod";
 import { canAdminister, getRequestContext } from "@/lib/account";
 import { prisma } from "@/lib/prisma";
 import { encryptSecret, sha256 } from "@/lib/secrets";
+import { assertPublicWebhookTarget } from "@/lib/ssrfGuard";
 
 const apiKeySchema = z.object({ type: z.literal("api-key"), name: z.string().trim().min(2).max(100) });
 const webhookSchema = z.object({
@@ -47,6 +48,11 @@ export async function POST(request: NextRequest) {
   }
   const parsed = webhookSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Enter a valid HTTPS webhook URL and select at least one event." }, { status: 400 });
+  try {
+    await assertPublicWebhookTarget(parsed.data.url);
+  } catch {
+    return NextResponse.json({ error: "Webhook URL must resolve to a public address." }, { status: 400 });
+  }
   const secret = `whsec_${randomBytes(24).toString("base64url")}`;
   const webhook = await prisma.webhookEndpoint.create({ data: { orgId: context.org.id, url: parsed.data.url, events: parsed.data.events, secretPrefix: secret.slice(0, 14), secretEncrypted: encryptSecret(secret) } });
   return NextResponse.json({ webhook: { ...webhook, secretEncrypted: undefined }, secret }, { status: 201 });

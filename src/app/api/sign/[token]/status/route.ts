@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isEnvelopeCompleted } from "@/lib/envelopeStatus";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,10 +23,7 @@ export async function GET(
   }
 
   return NextResponse.json(
-    {
-      completed:
-        signer.envelope.status === "COMPLETED" && Boolean(signer.envelope.signedKey),
-    },
+    { completed: isEnvelopeCompleted(signer.envelope) },
     { headers: { "Cache-Control": "private, no-store, max-age=0" } }
   );
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getObjectBuffer } from "@/lib/storage";
 import { createUnsignedReviewPdf } from "@/lib/unsignedPdfWatermark";
+import { isEnvelopeCompleted } from "@/lib/envelopeStatus";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export async function GET(
   }
 
   try {
-    const completed = signer.envelope.status === "COMPLETED" && Boolean(signer.envelope.signedKey);
+    const completed = isEnvelopeCompleted(signer.envelope);
     const requestedState = new URL(request.url).searchParams.get("state");
     if (requestedState === "completed" && !completed) {
       return NextResponse.json(
@@ -37,6 +38,14 @@ export async function GET(
           accentColour: signer.envelope.org.accentColour,
           envelopeId: signer.envelope.id,
           generatedAt: new Date(),
+        }).catch((error) => {
+          // Watermarking failed (e.g. a permission-restricted/encrypted
+          // source PDF pdf-lib can't fully parse). Fall back to the
+          // original bytes so the signer isn't blocked from reviewing
+          // the document — matches the pre-watermark passthrough
+          // behaviour for anything pdf-lib can't handle.
+          console.error("Unsigned review watermarking failed; serving original bytes", error);
+          return source;
         });
     const storedName = sourceKey.split("/").pop() || "document.pdf";
     const baseName = storedName

@@ -4,19 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { enqueueSealDocument, enqueueSendSigningLink, enqueueWebhookEvent } from "@/lib/queue";
 import { applyAuthorisedCompanySignature } from "@/lib/authorisedSigning";
 import { isStor24ControlledField } from "@/lib/signingFieldPolicy";
+import { clientIp } from "@/lib/clientIp";
 
 const submitSchema = z.object({
   fields: z.array(z.object({ fieldId: z.string(), value: z.string().min(1).max(2_000_000) })).max(300),
   consent: z.literal(true), // explicit consent to sign electronically, required
 });
-
-function clientIp(req: NextRequest) {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
 
 function signingDateToday() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Johannesburg", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
