@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestContext } from "@/lib/account";
+import { authenticateApiKey } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { getObjectBuffer } from "@/lib/storage";
 
@@ -11,12 +12,14 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const context = await getRequestContext();
-  if (!context) {
+  const apiKey = context ? null : await authenticateApiKey(request.headers.get("authorization"));
+  const orgId = context?.org.id ?? apiKey?.orgId;
+  if (!orgId) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
   const envelope = await prisma.envelope.findFirst({
-    where: { id: params.id, orgId: context.org.id, deletedAt: null },
+    where: { id: params.id, orgId, deletedAt: null },
   });
   if (!envelope) {
     return NextResponse.json({ error: "Document not found." }, { status: 404 });

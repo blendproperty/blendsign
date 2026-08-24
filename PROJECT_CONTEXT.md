@@ -1,5 +1,9 @@
 # BlendSign project context
 
+## Stor24 completed-document retrieval — 24 August 2026
+
+Task 6 has started on branch `codex/task6-integration-downloads`. The existing signed-PDF and completion-certificate routes now accept either the normal signed-in company context or a valid company-scoped BlendSign API key. Envelope lookup remains constrained to the API key's `orgId`, excludes deleted envelopes, and still returns `409` until sealing/certificate data is ready. This allows Stor24 to proxy completed artifacts server-to-server without exposing the API key or object-storage keys to the browser. TypeScript and the full production build pass locally. This is not deployed or production-proven yet; after merge/deployment, verify a valid Stor24 download, a wrong-company `404`, an invalid-key `401`, and an incomplete-envelope `409`.
+
 Last updated: 20 August 2026
 
 This is the primary handover document for engineers and language models working on BlendSign. Read this file, `prisma/schema.prisma`, and the relevant route handlers before changing the system. The older status section in `README.md` is partly outdated. The code is authoritative where documentation and implementation differ.

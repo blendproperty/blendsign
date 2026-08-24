@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { PDFDocument, PDFPage, PDFFont, StandardFonts, rgb } from "pdf-lib";
 import { getRequestContext } from "@/lib/account";
+import { authenticateApiKey } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -36,14 +37,16 @@ function wrapText(text: string, font: PDFFont, size: number, width: number) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   const context = await getRequestContext();
-  if (!context) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  const apiKey = context ? null : await authenticateApiKey(request.headers.get("authorization"));
+  const orgId = context?.org.id ?? apiKey?.orgId;
+  if (!orgId) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 
   const envelope = await prisma.envelope.findFirst({
-    where: { id: params.id, orgId: context.org.id, deletedAt: null },
+    where: { id: params.id, orgId, deletedAt: null },
     include: {
       org: true,
       createdBy: true,
