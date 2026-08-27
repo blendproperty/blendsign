@@ -42,11 +42,19 @@ async function flattenEnvelope({ originalBytes, fields, envelope, signers, audit
         });
       }
     } else {
-      // TEXT, DATE, CHECKBOX rendered as plain text
-      page.drawText(String(field.value).slice(0, 200), {
+      const rawValue = String(field.value);
+      const checkboxChecked = ["x", "true", "1", "yes", "on", "checked"].includes(rawValue.trim().toLowerCase());
+      if (field.type === "CHECKBOX" && !checkboxChecked) continue;
+      const renderedValue = field.type === "CHECKBOX" ? "X" : rawValue.slice(0, 200);
+      let fontSize = Math.min(12, boxH * 0.7);
+      while (fontSize > 6 && font.widthOfTextAtSize(renderedValue, fontSize) > Math.max(4, boxW - 4)) fontSize -= 0.5;
+      if (field.type === "CHECKBOX") {
+        page.drawRectangle({ x: boxX, y: boxYBottom, width: boxW, height: boxH, color: rgb(1, 1, 1) });
+      }
+      page.drawText(renderedValue, {
         x: boxX + 2,
         y: boxYBottom + boxH * 0.25,
-        size: Math.min(12, boxH * 0.7),
+        size: fontSize,
         font,
         color: rgb(0.1, 0.1, 0.1),
       });

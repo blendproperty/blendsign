@@ -6,6 +6,20 @@ type UnsignedWatermarkOptions = {
   generatedAt: Date;
 };
 
+type ReviewField = {
+  type: string;
+  value: string | null;
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+function checkboxIsChecked(value: string) {
+  return ["x", "true", "1", "yes", "on", "checked"].includes(value.trim().toLowerCase());
+}
+
 function colourFromHex(value: string) {
   const match = /^#([0-9a-f]{6})$/i.exec(value);
   const hex = match?.[1] || "ff5a00";
@@ -18,7 +32,8 @@ function colourFromHex(value: string) {
 
 export async function createUnsignedReviewPdf(
   original: Buffer,
-  options: UnsignedWatermarkOptions
+  options: UnsignedWatermarkOptions,
+  fields: ReviewField[] = []
 ) {
   // ignoreEncryption: many scanner/export PDFs carry an empty-password,
   // permissions-only encryption dictionary that pdf-lib would otherwise
@@ -29,6 +44,26 @@ export async function createUnsignedReviewPdf(
   const accent = colourFromHex(options.accentColour);
   const generated = options.generatedAt.toISOString();
   const reference = `Envelope ${options.envelopeId}`;
+
+  for (const field of fields) {
+    if (!field.value || field.type === "SIGNATURE" || field.type === "INITIALS") continue;
+    const page = pdf.getPages()[field.page - 1];
+    if (!page) continue;
+    const { width: pageWidth, height: pageHeight } = page.getSize();
+    const boxX = field.x * pageWidth;
+    const boxWidth = field.width * pageWidth;
+    const boxHeight = field.height * pageHeight;
+    const boxBottom = pageHeight - field.y * pageHeight - boxHeight;
+    const isCheckbox = field.type === "CHECKBOX";
+    if (isCheckbox && !checkboxIsChecked(field.value)) continue;
+    const text = isCheckbox ? "X" : String(field.value).slice(0, 200);
+    let fontSize = Math.min(12, boxHeight * 0.7);
+    while (fontSize > 6 && regular.widthOfTextAtSize(text, fontSize) > Math.max(4, boxWidth - 4)) fontSize -= 0.5;
+    if (isCheckbox) {
+      page.drawRectangle({ x: boxX, y: boxBottom, width: boxWidth, height: boxHeight, color: rgb(1, 1, 1) });
+    }
+    page.drawText(text, { x: boxX + 2, y: boxBottom + boxHeight * 0.25, size: fontSize, font: isCheckbox ? bold : regular, color: rgb(0.08, 0.08, 0.08) });
+  }
 
   for (const page of pdf.getPages()) {
     const { width, height } = page.getSize();

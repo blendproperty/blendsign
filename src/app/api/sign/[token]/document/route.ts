@@ -13,7 +13,7 @@ export async function GET(
 ) {
   const signer = await prisma.signer.findUnique({
     where: { token: params.token },
-    include: { envelope: { include: { org: true } } },
+    include: { envelope: { include: { org: true, fields: true } } },
   });
 
   if (!signer || signer.envelope.deletedAt) {
@@ -34,11 +34,11 @@ export async function GET(
     const source = await getObjectBuffer(sourceKey);
     const document = serveCompleted
       ? source
-      : await createUnsignedReviewPdf(source, {
+        : await createUnsignedReviewPdf(source, {
           accentColour: signer.envelope.org.accentColour,
           envelopeId: signer.envelope.id,
           generatedAt: new Date(),
-        }).catch((error) => {
+        }, signer.envelope.fields).catch((error) => {
           // Watermarking failed (e.g. a permission-restricted/encrypted
           // source PDF pdf-lib can't fully parse). Fall back to the
           // original bytes so the signer isn't blocked from reviewing
