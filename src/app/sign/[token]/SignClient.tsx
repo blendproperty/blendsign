@@ -24,17 +24,17 @@ function checkboxValueIsChecked(value: string | null | undefined) {
   return ["x", "true", "1", "yes", "on", "checked"].includes((value || "").trim().toLowerCase());
 }
 
-function AddressSearch({ value, required, readOnly, onChange, onSelect }: { value: string; required: boolean; readOnly: boolean; onChange: (value: string) => void; onSelect: (suggestion: AddressSuggestion) => void }) {
+function AddressSearch({ value, city, required, readOnly, onChange, onSelect }: { value: string; city: string; required: boolean; readOnly: boolean; onChange: (value: string) => void; onSelect: (suggestion: AddressSuggestion) => void }) {
   const [query, setQuery] = useState(value);
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [open, setOpen] = useState(false);
   const [searchHint, setSearchHint] = useState("");
-  const selectedValue = useRef(value);
+  const selectedValue = useRef("");
 
   useEffect(() => {
-    if (value !== selectedValue.current) { selectedValue.current = value; setQuery(value); }
-  }, [value]);
+    if (readOnly && value !== query) setQuery(value);
+  }, [value, query, readOnly]);
 
   useEffect(() => {
     if (readOnly || query.trim().length < 4 || query === selectedValue.current) { setSuggestions([]); setSearchHint(""); setSearching(false); return; }
@@ -42,7 +42,10 @@ function AddressSearch({ value, required, readOnly, onChange, onSelect }: { valu
     const timeout = window.setTimeout(async () => {
       setSearching(true);
       try {
-        const response = await fetch(`/api/address-search?q=${encodeURIComponent(query.trim())}`, { signal: controller.signal });
+        const typedQuery = query.trim();
+        const cityContext = city.trim();
+        const searchQuery = cityContext && !typedQuery.toLowerCase().includes(cityContext.toLowerCase()) ? `${typedQuery}, ${cityContext}` : typedQuery;
+        const response = await fetch(`/api/address-search?q=${encodeURIComponent(searchQuery)}`, { signal: controller.signal });
         const body = await response.json();
         setSuggestions(response.ok && Array.isArray(body.results) ? body.results : []);
         setSearchHint(typeof body.hint === "string" ? body.hint : "");
@@ -52,12 +55,12 @@ function AddressSearch({ value, required, readOnly, onChange, onSelect }: { valu
       } finally { if (!controller.signal.aborted) setSearching(false); }
     }, 350);
     return () => { window.clearTimeout(timeout); controller.abort(); };
-  }, [query, readOnly]);
+  }, [query, city, readOnly]);
 
   return <div className="address-search">
     <input className="field-input" type="search" autoComplete="street-address" placeholder="Start typing your street address…" value={query} readOnly={readOnly} aria-required={required} aria-expanded={open && suggestions.length > 0} onFocus={() => setOpen(true)} onBlur={() => window.setTimeout(() => setOpen(false), 150)} onChange={(event) => { selectedValue.current = ""; setQuery(event.target.value); onChange(event.target.value); }} />
     {searching ? <small className="address-search-status">Searching South African addresses…</small> : null}
-    {open && suggestions.length > 0 ? <div className="address-search-results" role="listbox">{suggestions.map((suggestion) => <button type="button" role="option" key={suggestion.id} onMouseDown={(event) => event.preventDefault()} onClick={() => { selectedValue.current = suggestion.address; setQuery(suggestion.address); setSuggestions([]); setOpen(false); onSelect(suggestion); }}><strong>{suggestion.address}</strong><small>{[suggestion.city, suggestion.postalCode].filter(Boolean).join(" · ")}</small></button>)}</div> : null}
+    {open && suggestions.length > 0 ? <div className="address-search-results" role="listbox"><div className="address-search-results-heading">Select the correct address</div>{suggestions.map((suggestion) => <button type="button" role="option" key={suggestion.id} onMouseDown={(event) => event.preventDefault()} onClick={() => { selectedValue.current = suggestion.address; setQuery(suggestion.address); setSuggestions([]); setOpen(false); onSelect(suggestion); }}><strong>{suggestion.address}</strong><small>{[suggestion.city, suggestion.postalCode].filter(Boolean).join(" · ")}</small></button>)}</div> : null}
     {!searching && open && searchHint ? <small className="address-search-status">{searchHint}</small> : null}
     <small className="address-search-help">Choose a result to fill the city and postal code, or type the address manually.</small>
   </div>;
@@ -153,6 +156,8 @@ export default function SignClient({
     .sort((a, b) => (priority[a.dataKey || ""] ?? 100) - (priority[b.dataKey || ""] ?? 100));
   const allFilled = fields.every((field) => !field.required || values[field.id]) && fields.every((field) => field.dataKey !== "debit.branchCode" || !values[field.id] || /^\d{6}$/.test(values[field.id]));
   const branchCodeField = fields.find((field) => field.dataKey === "debit.branchCode");
+  const cityField = fields.find((field) => field.dataKey === "tenant.city");
+  const postalCodeField = fields.find((field) => field.dataKey === "tenant.postalCode");
   const cityPostalCodes: Record<string, string> = { Alberton: "1449", Benoni: "1501", Bloemfontein: "9301", "Cape Town": "8001", Centurion: "0157", Durban: "4001", "East London": "5201", George: "6529", Gqeberha: "6001", Johannesburg: "2000", Kimberley: "8301", Midrand: "1685", Mbombela: "1200", Paarl: "7646", Pietermaritzburg: "3201", Polokwane: "0700", Pretoria: "0002", Randburg: "2194", Rustenburg: "0300", Sandton: "2196", Soweto: "1804", Stellenbosch: "7600" };
   const displayLabel = (field: Field) => {
     if (field.dataKey === "lease.signedAt" || field.dataKey === "debit.signedAt") return "Signed at (town/city where you are signing)";
@@ -276,9 +281,9 @@ export default function SignClient({
           ) : f.dataKey === "lease.signedAt" || f.dataKey === "debit.signedAt" ? (
             <><input className="field-input" list="south-african-signing-cities" placeholder="Select or type town / city" value={values[f.id] || ""} aria-required={f.required} onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value }))} /><datalist id="south-african-signing-cities">{Object.keys(cityPostalCodes).sort().map((city) => <option value={city} key={city} />)}</datalist></>
           ) : f.dataKey === "tenant.address" ? (
-            <AddressSearch value={values[f.id] || ""} required={f.required} readOnly={!f.editableBySigner} onChange={(value) => setFieldValue(f, value)} onSelect={(suggestion) => setValues((current) => ({ ...current, ...Object.fromEntries(fields.filter((candidate) => candidate.dataKey === "tenant.address").map((candidate) => [candidate.id, suggestion.address])), ...Object.fromEntries(fields.filter((candidate) => candidate.dataKey === "tenant.city").map((candidate) => [candidate.id, suggestion.city])), ...Object.fromEntries(fields.filter((candidate) => candidate.dataKey === "tenant.postalCode").map((candidate) => [candidate.id, suggestion.postalCode])) }))} />
+            <AddressSearch value={values[f.id] || ""} city={cityField ? values[cityField.id] || "" : ""} required={f.required} readOnly={!f.editableBySigner} onChange={(value) => setFieldValue(f, value)} onSelect={(suggestion) => setValues((current) => ({ ...current, ...Object.fromEntries(fields.filter((candidate) => candidate.dataKey === "tenant.address").map((candidate) => [candidate.id, suggestion.address])), ...Object.fromEntries(fields.filter((candidate) => candidate.dataKey === "tenant.city").map((candidate) => [candidate.id, suggestion.city])), ...Object.fromEntries(fields.filter((candidate) => candidate.dataKey === "tenant.postalCode").map((candidate) => [candidate.id, suggestion.postalCode])) }))} />
           ) : f.dataKey === "tenant.city" ? (
-            <input className="field-input" autoComplete="address-level2" placeholder="City / suburb" value={values[f.id] || ""} readOnly={!f.editableBySigner} aria-required={f.required} onChange={(event) => setFieldValue(f, event.target.value)} />
+            <><input className="field-input" list="south-african-address-cities" autoComplete="address-level2" placeholder="Select or type city / suburb" value={values[f.id] || ""} readOnly={!f.editableBySigner} aria-required={f.required} onChange={(event) => { const cityValue = event.target.value; setValues((current) => ({ ...current, ...Object.fromEntries(fields.filter((candidate) => candidate.dataKey === "tenant.city").map((candidate) => [candidate.id, cityValue])), ...(postalCodeField && !current[postalCodeField.id] && cityPostalCodes[cityValue] ? Object.fromEntries(fields.filter((candidate) => candidate.dataKey === "tenant.postalCode").map((candidate) => [candidate.id, cityPostalCodes[cityValue]])) : {}) })); }} /><datalist id="south-african-address-cities">{Object.keys(cityPostalCodes).sort().map((cityName) => <option value={cityName} key={cityName} />)}</datalist></>
           ) : f.dataKey === "tenant.postalCode" ? (
             <input className="field-input" autoComplete="postal-code" inputMode="numeric" placeholder="Postal code" value={values[f.id] || ""} readOnly={!f.editableBySigner} aria-required={f.required} onChange={(event) => setFieldValue(f, event.target.value.replace(/[^0-9A-Za-z -]/g, "").slice(0, 10))} />
           ) : f.type === "CHECKBOX" ? (
