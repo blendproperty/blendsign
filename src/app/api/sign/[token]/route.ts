@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { enqueueSealDocument, enqueueSendSigningLink, enqueueWebhookEvent } from "@/lib/queue";
 import { applyAuthorisedCompanySignature } from "@/lib/authorisedSigning";
-import { isStor24ControlledField } from "@/lib/signingFieldPolicy";
+import { signerCanEditField } from "@/lib/signingFieldPolicy";
 import { clientIp } from "@/lib/clientIp";
 
 const submitSchema = z.object({
@@ -87,7 +87,7 @@ export async function POST(
     return NextResponse.json({ error: "Complete every signing field before submitting." }, { status: 400 });
   }
   const changedLockedFields = assignedFields.filter((field) => {
-    const locked = !field.editableBySigner || (signer.envelope.externalSystem === "stor24" && isStor24ControlledField(field.dataKey));
+    const locked = !signerCanEditField({ editableBySigner: field.editableBySigner, externalSystem: signer.envelope.externalSystem, dataKey: field.dataKey });
     const expected = field.type === "DATE" ? field.value || signingDateToday() : field.value;
     return locked && submittedById.has(field.id) && submittedById.get(field.id) !== expected;
   });
