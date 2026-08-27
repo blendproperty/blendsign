@@ -66,7 +66,7 @@ function initialFieldValues(fields: Field[]) {
   const customerName = valueByKey.get("tenant.fullName") || "";
   fields.forEach((field) => {
     const value = field.type === "DATE"
-      ? signingDateToday()
+      ? field.value || signingDateToday()
       : field.dataKey === "tenant.contactPerson" && !field.value
         ? customerName
         : field.dataKey
@@ -95,6 +95,7 @@ export default function SignClient({
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [invalidFieldIds, setInvalidFieldIds] = useState<string[]>([]);
   const [otherBankSelected, setOtherBankSelected] = useState(() => fields.some((field) => field.dataKey === "debitOrder.bankName" && Boolean(field.value) && !southAfricanBanks.some((bank) => bank.name === field.value)));
 
   const captureGroups = Array.from(
@@ -140,6 +141,7 @@ export default function SignClient({
   async function submit() {
     setSubmitting(true);
     setError(null);
+    setInvalidFieldIds([]);
     try {
       const res = await fetch(`/api/sign/${token}`, {
         method: "POST",
@@ -152,7 +154,13 @@ export default function SignClient({
           })),
         }),
       });
-      if (!res.ok) throw new Error((await res.json()).error ?? "failed");
+      if (!res.ok) {
+        const body = await res.json();
+        const fieldIds = Array.isArray(body.fieldIds) ? body.fieldIds.filter((value: unknown): value is string => typeof value === "string") : [];
+        setInvalidFieldIds(fieldIds);
+        if (fieldIds.length) requestAnimationFrame(() => document.getElementById(`sign-field-${fieldIds[0]}`)?.scrollIntoView({ behavior: "smooth", block: "center" }));
+        throw new Error(body.error ?? "The document could not be signed.");
+      }
       setDone(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -209,7 +217,7 @@ export default function SignClient({
       })}
 
       {otherFields.map((f) => (
-        <div className={`sign-field ${f.required ? "sign-field--required" : "sign-field--optional"} ${!f.editableBySigner || f.type === "DATE" ? "sign-field--locked" : ""}`} key={f.id}>
+        <div id={`sign-field-${f.id}`} className={`sign-field ${f.required ? "sign-field--required" : "sign-field--optional"} ${!f.editableBySigner || f.type === "DATE" ? "sign-field--locked" : ""} ${invalidFieldIds.includes(f.id) ? "sign-field--invalid" : ""}`} key={f.id}>
           <div className="sign-field-label">
             <span>{displayLabel(f)}{f.required ? <b className="required-asterisk" aria-label="required">*</b> : <em className="optional-badge">Optional</em>}</span><small>{f.dataKey && fields.filter((candidate) => candidate.dataKey === f.dataKey).length > 1 ? `Automatically fills all matching PDF positions` : `Page ${f.page}`}{f.type === "DATE" ? " · Set to today's signing date" : !f.editableBySigner ? " · Locked by Stor24" : ""}</small>
           </div>
@@ -246,6 +254,7 @@ export default function SignClient({
               value={values[f.id] || ""}
               readOnly={!f.editableBySigner || f.type === "DATE"}
               aria-required={f.required}
+              aria-invalid={invalidFieldIds.includes(f.id)}
               onChange={(e) => setFieldValue(f, e.target.value)}
               className="field-input"
             />
