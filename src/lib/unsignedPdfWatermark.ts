@@ -62,7 +62,7 @@ export async function createUnsignedReviewPdf(
     if (isCheckbox) {
       page.drawRectangle({ x: boxX, y: boxBottom, width: boxWidth, height: boxHeight, color: rgb(1, 1, 1) });
     }
-    page.drawText(text, { x: boxX + 2, y: boxBottom + boxHeight * 0.25, size: fontSize, font: isCheckbox ? bold : regular, color: rgb(0.08, 0.08, 0.08) });
+    page.drawText(text, { x: boxX + 2, y: boxBottom + boxHeight * 0.45, size: fontSize, font: isCheckbox ? bold : regular, color: rgb(0.08, 0.08, 0.08) });
   }
 
   for (const page of pdf.getPages()) {

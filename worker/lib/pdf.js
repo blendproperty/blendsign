@@ -53,7 +53,7 @@ async function flattenEnvelope({ originalBytes, fields, envelope, signers, audit
       }
       page.drawText(renderedValue, {
         x: boxX + 2,
-        y: boxYBottom + boxH * 0.25,
+        y: boxYBottom + boxH * 0.45,
         size: fontSize,
         font,
         color: rgb(0.1, 0.1, 0.1),

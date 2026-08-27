@@ -1,4 +1,12 @@
 const stor24ControlledKeys = new Set([
+  "owner.companyName",
+  "owner.registrationNumber",
+  "owner.address",
+  "owner.city",
+  "owner.postalCode",
+  "owner.phone",
+  "owner.vatNumber",
+  "owner.email",
   "facility.name",
   "unit.number",
   "unit.size",
