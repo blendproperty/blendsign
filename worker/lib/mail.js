@@ -29,7 +29,7 @@ function logoUrl(organisation) {
     // Use a versioned filename rather than a query-string cache buster. Gmail and
     // other email image proxies can retain the first image fetched for a URL even
     // after the underlying asset changes.
-    return `${publicBaseUrl(organisation)}/brand/stor24-logo-official-20260827.svg`;
+    return `${publicBaseUrl(organisation)}/brand/stor24-logo-email-orange-20260827.svg`;
   }
   if (organisation?.logoKey && organisation?.id) {
     const version = organisation.updatedAt ? new Date(organisation.updatedAt).getTime() : "1";
