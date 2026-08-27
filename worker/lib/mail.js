@@ -26,7 +26,7 @@ function publicBaseUrl(organisation) {
 
 function logoUrl(organisation) {
   if (/stor\s*24/i.test(organisation?.name || "")) {
-    return `${publicBaseUrl(organisation)}/brand/stor24-logo-email.svg`;
+    return `${publicBaseUrl(organisation)}/brand/stor24-logo-email.svg?v=official-20260827`;
   }
   if (organisation?.logoKey && organisation?.id) {
     const version = organisation.updatedAt ? new Date(organisation.updatedAt).getTime() : "1";
