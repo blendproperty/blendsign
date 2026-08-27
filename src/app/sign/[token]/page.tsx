@@ -25,7 +25,7 @@ export default async function SignPage({
 
   const organisation = signer.envelope.org;
   const completedDocument = isEnvelopeCompleted(signer.envelope);
-  const logoUrl = organisation.logoKey ? `/api/brand/${organisation.id}/logo?v=${organisation.updatedAt.getTime()}` : organisation.logoUrl;
+  const logoUrl = /stor\s*24/i.test(organisation.name) ? "/brand/stor24-logo-email.svg" : organisation.logoKey ? `/api/brand/${organisation.id}/logo?v=${organisation.updatedAt.getTime()}` : organisation.logoUrl;
   const brandStyle = { "--sign-primary": organisation.primaryColour, "--sign-accent": organisation.accentColour } as CSSProperties;
   return (
     <main className="sign-recipient" style={brandStyle}>

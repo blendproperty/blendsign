@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 92" role="img" aria-labelledby="title desc">
+  <title id="title">Stor24</title>
+  <desc id="desc">The Stor24 wordmark with an orange hexagon.</desc>
+  <text x="0" y="68" font-family="Arial Black,Arial,sans-serif" font-size="64" font-weight="900" letter-spacing="-5" fill="#071411">ST</text>
+  <polygon points="158,10 193,30 193,70 158,90 123,70 123,30" fill="#ff5a0a"/>
+  <text x="199" y="68" font-family="Arial Black,Arial,sans-serif" font-size="64" font-weight="900" letter-spacing="-4" fill="#071411">R</text>
+  <text x="260" y="32" font-family="Arial Black,Arial,sans-serif" font-size="27" font-weight="900" letter-spacing="-2" fill="#071411">24</text>
+</svg>
