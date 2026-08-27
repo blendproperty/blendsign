@@ -1,5 +1,30 @@
 # BlendSign project context
 
+## Claude takeover handover — 27 August 2026
+
+Before changing anything, Claude must read the current `PROJECT_CONTEXT.md` in `blendproperty/blendsign`, `blendproperty/stor24-portal` and `blendproperty/stor24`, then inspect remote heads, migrations, the active Stor24 templates and the exact signer field metadata. Do not infer current behaviour from an old email or cached image.
+
+Current BlendSign handover state:
+
+- Repository `blendproperty/blendsign` deploys from `main`. Remote `main` and review branch `codex/debit-checkbox-address-search` point to `f6a585f` (`Bust cached Stor24 email logo`).
+- Production deployment run `33069457736` completed successfully for exact commit `f6a585f2caa7765dbfcf27a3e4157d5f7120897e`. The live official logo asset returned HTTP 200 and matched the committed SHA-256 `4BDE84BF63345D2238448494C1ABD3DD03C26FE19DB2BD776C6894D810AAA985`.
+- Stor24 signing-request and completed-document emails use the branded dark green/orange layout. The official wordmark is served from the uniquely versioned `/brand/stor24-logo-official-20260827.svg`; the unique filename is deliberate because Gmail cached the earlier incorrect spaced-out SVG. Old received emails may retain their cached image; newly generated emails use the corrected URL.
+- Stor24 signer pages and emails were branded in `06cbc31`. Do not recreate the logo with SVG text or CSS; use the approved official asset.
+- Signer-editable bank and debit-order fields were corrected in `5d34d9a`. Integration-supplied locked fields remain immutable, but empty fields the customer must complete must not be labelled or enforced as locked.
+- South African address autocomplete was introduced and corrected through `65cd6a7`, `0130f12`, `d573d48` and `1072ab5`. It supports suggestions plus manual fallback, preserves typed house numbers, and fills city/postal code when a result is selected. Do not remove manual city/postal-code editing when search has no suitable match.
+- Unsigned signer PDF review rendering and lease owner/company merge fields were corrected in `fc2cee6` and `0268f4c`. Verify both the on-screen form values and generated PDF positions when changing mappings.
+- BlendSign supports the standard Stor24 lease and the debit-order variant. Template choice belongs to the CRM. Signer order remains customer first, then Stor24 representative.
+- Completed-document delivery attaches the sealed PDF and records per-recipient audit events. Invitation, completion and webhook processing run in the worker; deployment must rebuild and recreate both `app` and `worker`.
+- The worktree contains an unrelated untracked `tmp/` directory. Do not commit or delete it without first identifying ownership.
+
+Next recommended work:
+
+1. Generate one new signing invitation and one new completed-document email to visually confirm the corrected official logo; old Gmail messages are not valid cache tests.
+2. Run both standard and debit-order template UAT. Confirm editable versus locked fields, address suggestion/manual fallback, bank fields, recurring-payment checkbox, signatures, signer order and final PDF.
+3. Confirm store/company details populate every required PDF occurrence, not just the browser form.
+4. Verify the CRM receives and records the envelope/invitation outcome accurately, including queued, failed and completed states.
+5. Keep real credentials, customer data, document URLs and signer tokens out of this file and Git history.
+
 ## Stor24 completed-document retrieval — 24 August 2026
 
 Task 6 has started on branch `codex/task6-integration-downloads`. The existing signed-PDF and completion-certificate routes now accept either the normal signed-in company context or a valid company-scoped BlendSign API key. Envelope lookup remains constrained to the API key's `orgId`, excludes deleted envelopes, and still returns `409` until sealing/certificate data is ready. This allows Stor24 to proxy completed artifacts server-to-server without exposing the API key or object-storage keys to the browser. TypeScript and the full production build pass locally. This is not deployed or production-proven yet; after merge/deployment, verify a valid Stor24 download, a wrong-company `404`, an invalid-key `401`, and an incomplete-envelope `409`.
