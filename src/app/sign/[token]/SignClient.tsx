@@ -29,6 +29,7 @@ function AddressSearch({ value, required, readOnly, onChange, onSelect }: { valu
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [open, setOpen] = useState(false);
+  const [searchHint, setSearchHint] = useState("");
   const selectedValue = useRef(value);
 
   useEffect(() => {
@@ -36,7 +37,7 @@ function AddressSearch({ value, required, readOnly, onChange, onSelect }: { valu
   }, [value]);
 
   useEffect(() => {
-    if (readOnly || query.trim().length < 4 || query === selectedValue.current) { setSuggestions([]); setSearching(false); return; }
+    if (readOnly || query.trim().length < 4 || query === selectedValue.current) { setSuggestions([]); setSearchHint(""); setSearching(false); return; }
     const controller = new AbortController();
     const timeout = window.setTimeout(async () => {
       setSearching(true);
@@ -44,9 +45,10 @@ function AddressSearch({ value, required, readOnly, onChange, onSelect }: { valu
         const response = await fetch(`/api/address-search?q=${encodeURIComponent(query.trim())}`, { signal: controller.signal });
         const body = await response.json();
         setSuggestions(response.ok && Array.isArray(body.results) ? body.results : []);
+        setSearchHint(typeof body.hint === "string" ? body.hint : "");
         setOpen(true);
       } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) setSuggestions([]);
+        if (!(error instanceof DOMException && error.name === "AbortError")) { setSuggestions([]); setSearchHint("Address search is temporarily unavailable. You can still enter it manually."); }
       } finally { if (!controller.signal.aborted) setSearching(false); }
     }, 350);
     return () => { window.clearTimeout(timeout); controller.abort(); };
@@ -56,6 +58,7 @@ function AddressSearch({ value, required, readOnly, onChange, onSelect }: { valu
     <input className="field-input" type="search" autoComplete="street-address" placeholder="Start typing your street address…" value={query} readOnly={readOnly} aria-required={required} aria-expanded={open && suggestions.length > 0} onFocus={() => setOpen(true)} onBlur={() => window.setTimeout(() => setOpen(false), 150)} onChange={(event) => { selectedValue.current = ""; setQuery(event.target.value); onChange(event.target.value); }} />
     {searching ? <small className="address-search-status">Searching South African addresses…</small> : null}
     {open && suggestions.length > 0 ? <div className="address-search-results" role="listbox">{suggestions.map((suggestion) => <button type="button" role="option" key={suggestion.id} onMouseDown={(event) => event.preventDefault()} onClick={() => { selectedValue.current = suggestion.address; setQuery(suggestion.address); setSuggestions([]); setOpen(false); onSelect(suggestion); }}><strong>{suggestion.address}</strong><small>{[suggestion.city, suggestion.postalCode].filter(Boolean).join(" · ")}</small></button>)}</div> : null}
+    {!searching && open && searchHint ? <small className="address-search-status">{searchHint}</small> : null}
     <small className="address-search-help">Choose a result to fill the city and postal code, or type the address manually.</small>
   </div>;
 }
