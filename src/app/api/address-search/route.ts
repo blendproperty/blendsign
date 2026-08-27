@@ -13,10 +13,11 @@ export async function GET(request: NextRequest) {
     const response = await fetch(url, { headers: { Accept: "application/json", "User-Agent": "BlendSign/1.0 address-search" }, signal: AbortSignal.timeout(5_000), next: { revalidate: 86_400 } });
     if (!response.ok) throw new Error(`Address provider returned ${response.status}`);
     const body = await response.json() as { features?: PhotonFeature[] };
+    const typedHouseNumber = query.match(/^\s*(\d+[A-Za-z]?)(?:\s|,)/)?.[1] || "";
     const results = (body.features || []).map((feature, index) => {
       const properties = feature.properties || {};
       const street = clean(properties.street) || clean(properties.name);
-      const address = [clean(properties.housenumber), street].filter(Boolean).join(" ");
+      const address = [clean(properties.housenumber) || typedHouseNumber, street].filter(Boolean).join(" ");
       const city = clean(properties.city) || clean(properties.district) || clean(properties.county);
       const postalCode = clean(properties.postcode);
       const label = [address, city, postalCode, clean(properties.state), clean(properties.country)].filter(Boolean).join(", ");
