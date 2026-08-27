@@ -859,6 +859,13 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .sign-field--required .sign-checkbox-field { border-color: color-mix(in srgb, var(--sign-accent) 68%, var(--line)); border-left: 4px solid var(--sign-accent); }
 .sign-field--optional .sign-checkbox-field { background: #fbfaf8; }
 .sign-checkbox-field input { width: 18px; height: 18px; accent-color: var(--sign-accent); }
+.address-search { position: relative; }
+.address-search-status, .address-search-help { display: block; margin-top: 7px; color: #6d675e; font-size: 11px; }
+.address-search-results { position: absolute; z-index: 30; top: calc(100% - 20px); left: 0; right: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: #fff; box-shadow: 0 18px 40px rgba(16, 42, 35, .18); }
+.address-search-results button { width: 100%; display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border: 0; border-bottom: 1px solid var(--line); background: #fff; color: var(--ink); text-align: left; cursor: pointer; }
+.address-search-results button:last-child { border-bottom: 0; }
+.address-search-results button:hover, .address-search-results button:focus { background: #f5f1e8; outline: none; }
+.address-search-results small { color: #6d675e; }
 .sign-consent { display: flex; align-items: flex-start; gap: 12px; margin: 23px 0; padding: 17px; background: #f2f0eb; color: #514e48; font-size: 11px; line-height: 1.55; }
 .sign-consent input { flex: 0 0 auto; margin-top: 2px; accent-color: var(--sign-accent); }
 .sign-submit { min-width: 190px; background: var(--sign-primary); color: #fff; }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SignatureCapture from "@/components/SignatureCapture";
 
 type Field = {
@@ -17,6 +17,48 @@ type Field = {
   width: number;
   height: number;
 };
+
+type AddressSuggestion = { id: string; label: string; address: string; city: string; postalCode: string };
+
+function checkboxValueIsChecked(value: string | null | undefined) {
+  return ["x", "true", "1", "yes", "on", "checked"].includes((value || "").trim().toLowerCase());
+}
+
+function AddressSearch({ value, required, readOnly, onChange, onSelect }: { value: string; required: boolean; readOnly: boolean; onChange: (value: string) => void; onSelect: (suggestion: AddressSuggestion) => void }) {
+  const [query, setQuery] = useState(value);
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [open, setOpen] = useState(false);
+  const selectedValue = useRef(value);
+
+  useEffect(() => {
+    if (value !== selectedValue.current) { selectedValue.current = value; setQuery(value); }
+  }, [value]);
+
+  useEffect(() => {
+    if (readOnly || query.trim().length < 4 || query === selectedValue.current) { setSuggestions([]); setSearching(false); return; }
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const response = await fetch(`/api/address-search?q=${encodeURIComponent(query.trim())}`, { signal: controller.signal });
+        const body = await response.json();
+        setSuggestions(response.ok && Array.isArray(body.results) ? body.results : []);
+        setOpen(true);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) setSuggestions([]);
+      } finally { if (!controller.signal.aborted) setSearching(false); }
+    }, 350);
+    return () => { window.clearTimeout(timeout); controller.abort(); };
+  }, [query, readOnly]);
+
+  return <div className="address-search">
+    <input className="field-input" type="search" autoComplete="street-address" placeholder="Start typing your street address…" value={query} readOnly={readOnly} aria-required={required} aria-expanded={open && suggestions.length > 0} onFocus={() => setOpen(true)} onBlur={() => window.setTimeout(() => setOpen(false), 150)} onChange={(event) => { selectedValue.current = ""; setQuery(event.target.value); onChange(event.target.value); }} />
+    {searching ? <small className="address-search-status">Searching South African addresses…</small> : null}
+    {open && suggestions.length > 0 ? <div className="address-search-results" role="listbox">{suggestions.map((suggestion) => <button type="button" role="option" key={suggestion.id} onMouseDown={(event) => event.preventDefault()} onClick={() => { selectedValue.current = suggestion.address; setQuery(suggestion.address); setSuggestions([]); setOpen(false); onSelect(suggestion); }}><strong>{suggestion.address}</strong><small>{[suggestion.city, suggestion.postalCode].filter(Boolean).join(" · ")}</small></button>)}</div> : null}
+    <small className="address-search-help">Choose a result to fill the city and postal code, or type the address manually.</small>
+  </div>;
+}
 
 const southAfricanBanks: ReadonlyArray<{ name: string; code?: string }> = [
   { name: "Absa Bank", code: "632005" },
@@ -96,7 +138,7 @@ export default function SignClient({
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [invalidFieldIds, setInvalidFieldIds] = useState<string[]>([]);
-  const [otherBankSelected, setOtherBankSelected] = useState(() => fields.some((field) => field.dataKey === "debitOrder.bankName" && Boolean(field.value) && !southAfricanBanks.some((bank) => bank.name === field.value)));
+  const [otherBankSelected, setOtherBankSelected] = useState(() => fields.some((field) => field.dataKey === "debit.bankName" && Boolean(field.value) && !southAfricanBanks.some((bank) => bank.name === field.value)));
 
   const captureGroups = Array.from(
     new Set(fields.filter((field) => field.type === "SIGNATURE" || field.type === "INITIALS").map((field) => field.type))
@@ -106,12 +148,11 @@ export default function SignClient({
     .filter((field) => field.type !== "SIGNATURE" && field.type !== "INITIALS")
     .filter((field, index, candidates) => !field.dataKey || candidates.findIndex((candidate) => candidate.dataKey === field.dataKey) === index)
     .sort((a, b) => (priority[a.dataKey || ""] ?? 100) - (priority[b.dataKey || ""] ?? 100));
-  const allFilled = fields.every((field) => !field.required || values[field.id]) && fields.every((field) => field.dataKey !== "debitOrder.branchCode" || !values[field.id] || /^\d{6}$/.test(values[field.id]));
-  const postalField = fields.find((field) => field.dataKey === "tenant.postalCode");
-  const branchCodeField = fields.find((field) => field.dataKey === "debitOrder.branchCode");
+  const allFilled = fields.every((field) => !field.required || values[field.id]) && fields.every((field) => field.dataKey !== "debit.branchCode" || !values[field.id] || /^\d{6}$/.test(values[field.id]));
+  const branchCodeField = fields.find((field) => field.dataKey === "debit.branchCode");
   const cityPostalCodes: Record<string, string> = { Alberton: "1449", Benoni: "1501", Bloemfontein: "9301", "Cape Town": "8001", Centurion: "0157", Durban: "4001", "East London": "5201", George: "6529", Gqeberha: "6001", Johannesburg: "2000", Kimberley: "8301", Midrand: "1685", Mbombela: "1200", Paarl: "7646", Pietermaritzburg: "3201", Polokwane: "0700", Pretoria: "0002", Randburg: "2194", Rustenburg: "0300", Sandton: "2196", Soweto: "1804", Stellenbosch: "7600" };
   const displayLabel = (field: Field) => {
-    if (field.dataKey === "lease.signedAt" || field.dataKey === "debitOrder.signedAt") return "Signed at (town/city where you are signing)";
+    if (field.dataKey === "lease.signedAt" || field.dataKey === "debit.signedAt") return "Signed at (town/city where you are signing)";
     if ((field.label || "").toLowerCase().includes("final execution date")) return "Final execution date (date Stor24 countersigns and completes the agreement)";
     if (field.type === "DATE" && /storer signing date|storer date/.test((field.label || "").toLowerCase())) return "Your signing date (today)";
     if (field.type === "DATE" && /debit mandate signature date/.test((field.label || "").toLowerCase())) return "Debit mandate signing date (today)";
@@ -221,27 +262,27 @@ export default function SignClient({
           <div className="sign-field-label">
             <span>{displayLabel(f)}{f.required ? <b className="required-asterisk" aria-label="required">*</b> : <em className="optional-badge">Optional</em>}</span><small>{f.dataKey && fields.filter((candidate) => candidate.dataKey === f.dataKey).length > 1 ? `Automatically fills all matching PDF positions` : `Page ${f.page}`}{f.type === "DATE" ? " · Set to today's signing date" : !f.editableBySigner ? " · Locked by Stor24" : ""}</small>
           </div>
-          {f.dataKey === "debitOrder.bankName" ? (
+          {f.dataKey === "debit.bankName" ? (
             <div className="bank-selector-stack"><select className="field-input" aria-required={f.required} value={otherBankSelected ? "__other" : values[f.id] || ""} onChange={(event) => { const bank = event.target.value; const other = bank === "__other"; setOtherBankSelected(other); setValues((current) => ({ ...current, [f.id]: other ? "" : bank, ...(branchCodeField ? { [branchCodeField.id]: other ? "" : universalCodeByBank[bank] || "" } : {}) })); }}><option value="">Select a South African bank…</option>{southAfricanBanks.map((bank) => <option value={bank.name} key={bank.name}>{bank.name}</option>)}<option value="__other">Other bank</option></select>{otherBankSelected ? <input className="field-input" placeholder="Enter bank name" value={values[f.id] || ""} aria-required="true" onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value }))} /> : null}</div>
-          ) : f.dataKey === "debitOrder.branchCode" ? (
+          ) : f.dataKey === "debit.branchCode" ? (
             <input className="field-input" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} placeholder="6-digit branch code" value={values[f.id] || ""} readOnly={!f.editableBySigner || Object.values(universalCodeByBank).includes(values[f.id] || "")} aria-required={f.required} onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value.replace(/\D/g, "").slice(0, 6) }))} />
-          ) : f.dataKey === "debitOrder.accountType" ? (
+          ) : f.dataKey === "debit.accountType" ? (
             <select className="field-input" aria-required={f.required} value={values[f.id] || ""} onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value }))}>
               <option value="">Select account type…</option><option value="Current">Current</option><option value="Cheque">Cheque</option><option value="Savings">Savings</option><option value="Transmission">Transmission</option>
             </select>
-          ) : f.dataKey === "lease.signedAt" || f.dataKey === "debitOrder.signedAt" ? (
+          ) : f.dataKey === "lease.signedAt" || f.dataKey === "debit.signedAt" ? (
             <><input className="field-input" list="south-african-signing-cities" placeholder="Select or type town / city" value={values[f.id] || ""} aria-required={f.required} onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value }))} /><datalist id="south-african-signing-cities">{Object.keys(cityPostalCodes).sort().map((city) => <option value={city} key={city} />)}</datalist></>
+          ) : f.dataKey === "tenant.address" ? (
+            <AddressSearch value={values[f.id] || ""} required={f.required} readOnly={!f.editableBySigner} onChange={(value) => setFieldValue(f, value)} onSelect={(suggestion) => setValues((current) => ({ ...current, ...Object.fromEntries(fields.filter((candidate) => candidate.dataKey === "tenant.address").map((candidate) => [candidate.id, suggestion.address])), ...Object.fromEntries(fields.filter((candidate) => candidate.dataKey === "tenant.city").map((candidate) => [candidate.id, suggestion.city])), ...Object.fromEntries(fields.filter((candidate) => candidate.dataKey === "tenant.postalCode").map((candidate) => [candidate.id, suggestion.postalCode])) }))} />
           ) : f.dataKey === "tenant.city" ? (
-            <select className="field-input" aria-required={f.required} value={values[f.id] || ""} disabled={!f.editableBySigner} onChange={(event) => setValues((current) => ({ ...current, [f.id]: event.target.value, ...(postalField && cityPostalCodes[event.target.value] ? { [postalField.id]: cityPostalCodes[event.target.value] } : {}) }))}>
-              <option value="">Select city / suburb…</option>
-              {values[f.id] && !cityPostalCodes[values[f.id]] ? <option value={values[f.id]}>{values[f.id]}</option> : null}
-              {Object.keys(cityPostalCodes).sort().map((city) => <option value={city} key={city}>{city}</option>)}
-            </select>
+            <input className="field-input" autoComplete="address-level2" placeholder="City / suburb" value={values[f.id] || ""} readOnly={!f.editableBySigner} aria-required={f.required} onChange={(event) => setFieldValue(f, event.target.value)} />
+          ) : f.dataKey === "tenant.postalCode" ? (
+            <input className="field-input" autoComplete="postal-code" inputMode="numeric" placeholder="Postal code" value={values[f.id] || ""} readOnly={!f.editableBySigner} aria-required={f.required} onChange={(event) => setFieldValue(f, event.target.value.replace(/[^0-9A-Za-z -]/g, "").slice(0, 10))} />
           ) : f.type === "CHECKBOX" ? (
             <label className="sign-checkbox-field" data-required={f.required}>
               <input
                 type="checkbox"
-                checked={values[f.id] === "X"}
+                checked={checkboxValueIsChecked(values[f.id])}
                 disabled={!f.editableBySigner}
                 onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.checked ? "X" : "" }))}
               />

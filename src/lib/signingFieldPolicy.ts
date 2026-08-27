@@ -6,8 +6,8 @@ const stor24ControlledKeys = new Set([
   "lease.monthlyRental",
   "lease.deposit",
   "payment.debitOrder",
-  "debitOrder.commencementDate",
-  "debitOrder.amount",
+  "debit.commencementDate",
+  "debit.amount",
   "stor24.representativeName",
 ]);
 
