@@ -79,10 +79,13 @@ export async function POST(
 
   const assignedFields = await prisma.field.findMany({
     where: { signerId: signer.id },
-    select: { id: true, type: true, dataKey: true, required: true, editableBySigner: true, value: true },
+    select: { id: true, type: true, label: true, page: true, dataKey: true, required: true, editableBySigner: true, value: true },
   });
   const assignedById = new Map(assignedFields.map((field) => [field.id, field]));
-  const normalisedFields = parsed.data.fields.map((field) => ({ ...field, value: assignedById.get(field.fieldId)?.type === "DATE" ? signingDateToday() : field.value }));
+  const normalisedFields = parsed.data.fields.map((field) => {
+    const assigned = assignedById.get(field.fieldId);
+    return { ...field, value: assigned?.type === "DATE" ? assigned.value || signingDateToday() : field.value };
+  });
   const submittedById = new Map(normalisedFields.map((field) => [field.fieldId, field.value]));
   if (submittedById.size !== parsed.data.fields.length || parsed.data.fields.some((field) => !assignedById.has(field.fieldId))) {
     return NextResponse.json({ error: "A submitted field does not belong to this signer." }, { status: 400 });
@@ -90,8 +93,17 @@ export async function POST(
   if (assignedFields.some((field) => field.required && !(submittedById.get(field.id) || field.value))) {
     return NextResponse.json({ error: "Complete every signing field before submitting." }, { status: 400 });
   }
-  if (assignedFields.some((field) => (!field.editableBySigner || (signer.envelope.externalSystem === "stor24" && isStor24ControlledField(field.dataKey))) && submittedById.has(field.id) && submittedById.get(field.id) !== field.value)) {
-    return NextResponse.json({ error: "A pre-filled field cannot be changed." }, { status: 400 });
+  const changedLockedFields = assignedFields.filter((field) => {
+    const locked = !field.editableBySigner || (signer.envelope.externalSystem === "stor24" && isStor24ControlledField(field.dataKey));
+    const expected = field.type === "DATE" ? field.value || signingDateToday() : field.value;
+    return locked && submittedById.has(field.id) && submittedById.get(field.id) !== expected;
+  });
+  if (changedLockedFields.length) {
+    return NextResponse.json({
+      error: `This pre-filled field is locked: ${changedLockedFields[0].label || changedLockedFields[0].dataKey || `page ${changedLockedFields[0].page}`}.`,
+      code: "LOCKED_FIELD_CHANGED",
+      fieldIds: changedLockedFields.map((field) => field.id),
+    }, { status: 400 });
   }
   const repeatedKeys = new Set(assignedFields.map((field) => field.dataKey).filter((key): key is string => Boolean(key)));
   if (Array.from(repeatedKeys).some((key) => new Set(assignedFields.filter((field) => field.dataKey === key).map((field) => submittedById.get(field.id) || field.value || "")).size > 1)) {
