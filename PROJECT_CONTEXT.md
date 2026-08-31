@@ -6,6 +6,12 @@
 - `https://blendsign.srv938083.hstgr.cloud/login` returns HTTP 200. An unauthenticated request to `/api/v1/health` returns HTTP 401 with the expected missing-API-key boundary; this proves the protected API is responding, not authenticated integration health.
 - The matching Stor24 CRM baseline is `bce09438718437b5ab06052c5af069a73f329be8` (VPS deploy `#263`). Baseline reconciliation is complete, while controlled failure, retry, HMAC, organisation-scope and idempotency evidence remains the next acceptance slice.
 
+## Stor24 integration acceptance suite — 31 August 2026
+
+- The automated suite now proves the cross-repository contract at the BlendSign boundary: bounded organisation-scoped envelope idempotency, concurrent-create recovery, active-envelope resend restrictions, organisation isolation, audit-backed resend idempotency, deterministic queue identity, current-routing-tier reminders, auto-signer exclusion, and fail-closed completed-document/certificate retrieval until sealing evidence exists.
+- Local evidence: all 9 BlendSign integration/routing tests pass and the production build compiles, type-checks and renders all 43 static pages. The local standalone copy step emitted a Windows symlink warning because this clean worktree reuses a dependency junction; GitHub/VPS deployment remains the authoritative packaging check.
+- This closes the non-mutating automated evidence only. A controlled production retry/resend still requires a named approved test envelope and recipient immediately before sending. The test must verify exactly one reminder, an idempotent repeat with no second email, organisation isolation, and matching audit evidence before the live acceptance gate closes.
+
 ## Claude takeover handover — 27 August 2026
 
 Before changing anything, Claude must read the current `PROJECT_CONTEXT.md` in `blendproperty/blendsign`, `blendproperty/stor24-portal` and `blendproperty/stor24`, then inspect remote heads, migrations, the active Stor24 templates and the exact signer field metadata. Do not infer current behaviour from an old email or cached image.
