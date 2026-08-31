@@ -9,7 +9,11 @@ const connection = new IORedis(
 export const blendsignQueue = new Queue("blendsign", { connection });
 
 export async function enqueueSendSigningLink(signerId: string, jobId?: string) {
-  await blendsignQueue.add("send-signing-link", { signerId }, jobId ? { jobId } : undefined);
+  await blendsignQueue.add(
+    "send-signing-link",
+    { signerId },
+    { ...(jobId ? { jobId } : {}), attempts: 5, backoff: { type: "exponential", delay: 3000 } }
+  );
 }
 
 export async function enqueueSealDocument(envelopeId: string) {

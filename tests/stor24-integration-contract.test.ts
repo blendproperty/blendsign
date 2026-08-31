@@ -6,6 +6,8 @@ const resendRoute = fs.readFileSync("src/app/api/v1/envelopes/[id]/resend/route.
 const createRoute = fs.readFileSync("src/app/api/v1/envelopes/from-template/route.ts", "utf8");
 const documentRoute = fs.readFileSync("src/app/api/envelopes/[id]/document/route.ts", "utf8");
 const certificateRoute = fs.readFileSync("src/app/api/envelopes/[id]/certificate/route.ts", "utf8");
+const queue = fs.readFileSync("src/lib/queue.ts", "utf8");
+const worker = fs.readFileSync("worker/index.js", "utf8");
 const schema = fs.readFileSync("prisma/schema.prisma", "utf8");
 
 test("Stor24 envelope creation requires a bounded idempotency key", () => {
@@ -20,6 +22,17 @@ test("concurrent envelope creation resolves to the existing organisation-scoped 
   assert.match(createRoute, /if \(raced\) return NextResponse\.json\(envelopeResponse\(raced, raced\.signers, true\)\)/);
 });
 
+test("unknown merge keys and incomplete recipient roles fail before envelope creation", () => {
+  assert.match(createRoute, /Unknown template data keys\./);
+  assert.match(createRoute, /unknownKeys/);
+  assert.match(createRoute, /Provide one recipient for every template role\./);
+  const unknownKeyGuard = createRoute.indexOf("Unknown template data keys.");
+  const missingRoleGuard = createRoute.indexOf("Provide one recipient for every template role.");
+  const createCall = createRoute.indexOf("createEnvelopeFromTemplate({");
+  assert.ok(unknownKeyGuard > -1 && unknownKeyGuard < createCall);
+  assert.ok(missingRoleGuard > -1 && missingRoleGuard < createCall);
+});
+
 test("resend is organisation-scoped and limited to active envelopes", () => {
   assert.match(resendRoute, /where: \{ id, orgId: apiKey\.orgId, deletedAt: null \}/);
   assert.match(resendRoute, /\["SENT", "PARTIALLY_SIGNED"\]\.includes\(envelope\.status\)/);
@@ -31,6 +44,12 @@ test("resend retries are idempotent in both audit and queue identity", () => {
   assert.match(resendRoute, /metadata: \{ path: \["requestId"\], equals: requestId \}/);
   assert.match(resendRoute, /`reminder-\$\{requestId\}-\$\{signer\.id\}`/);
   assert.match(resendRoute, /idempotent: true/);
+});
+
+test("signing-provider outages are audited and retried with bounded backoff", () => {
+  assert.match(worker, /eventType: "delivery_failed"/);
+  assert.match(worker, /throw error/);
+  assert.match(queue, /"send-signing-link"[\s\S]*attempts: 5[\s\S]*backoff: \{ type: "exponential", delay: 3000 \}/);
 });
 
 test("completed document retrieval is API-key organisation scoped and fails closed until sealed", () => {
