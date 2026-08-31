@@ -1,5 +1,11 @@
 # BlendSign project context
 
+## Verified Stor24 production baseline — 31 August 2026
+
+- Repository `blendproperty/blendsign` production branch `main` is at `142c4632189bd6a69463c792641d365e614fd9c4`. Manual VPS deployment run `#33` completed successfully for that exact commit.
+- `https://blendsign.srv938083.hstgr.cloud/login` returns HTTP 200. An unauthenticated request to `/api/v1/health` returns HTTP 401 with the expected missing-API-key boundary; this proves the protected API is responding, not authenticated integration health.
+- The matching Stor24 CRM baseline is `bce09438718437b5ab06052c5af069a73f329be8` (VPS deploy `#263`). Baseline reconciliation is complete, while controlled failure, retry, HMAC, organisation-scope and idempotency evidence remains the next acceptance slice.
+
 ## Claude takeover handover — 27 August 2026
 
 Before changing anything, Claude must read the current `PROJECT_CONTEXT.md` in `blendproperty/blendsign`, `blendproperty/stor24-portal` and `blendproperty/stor24`, then inspect remote heads, migrations, the active Stor24 templates and the exact signer field metadata. Do not infer current behaviour from an old email or cached image.
