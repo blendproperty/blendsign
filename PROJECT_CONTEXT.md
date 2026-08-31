@@ -964,3 +964,13 @@ Two blocking BlendSign improvements were added to the Task 4 remediation scope o
 4. Add secure completed-PDF/certificate retrieval and the Stor24 tenant/lease Documents UI; this remains an implementation gap, not merely a test.
 
 Production customer records must not be used for the first verification. Clean up disposable records only after evidence has been retained.
+
+## Production retry/idempotency UAT — 31 August 2026
+
+- Automated production-contract coverage was deployed at BlendSign commit `1740564e0f06943eb1ac28cf32e69ea924f53143` by successful VPS deployment run `33362641691`. The six Stor24 integration tests cover bounded organisation-scoped envelope creation, concurrent-create recovery, organisation isolation, resend audit/queue idempotency, and fail-closed completed-document/certificate access. The combined BlendSign suite passed 9 tests and the production build completed before promotion.
+- With explicit approval, Stor24 created debit-order envelope `cmtguh1t200015iu2lgmn6nrw` for disposable UAT account `ST24-MTGUH18X`, customer `Premium UAT 2808`, Midpoint Unit 103, sent to the verified test recipient `doveybrett@gmail.com`. The live Integrations screen classified the single document as `Awaiting signature`, with expiry 07 September 2026 08:15 SAST.
+- One approved reminder and one immediate duplicate retry were submitted from Stor24. Both actions continued to reference the same document ID and the reconciliation table remained at one awaiting-signature envelope, proving no duplicate envelope was created. The UI reported `Signing invitation queued again` for both actions.
+- Do not claim duplicate-email suppression from this evidence alone: the Stor24 screen exposes provider acceptance and envelope identity, not recipient inbox count or BlendSign delivery-attempt audit detail. That remaining proof requires recipient mailbox evidence or authenticated BlendSign audit inspection.
+- The pre-existing three `Reconciliation required` records remain visible and unchanged. Webhook inbox stayed at 134 processed, 0 pending and 0 failed/dead-letter; transactional outbox stayed empty.
+
+The next bounded action is to inspect the BlendSign audit trail or recipient mailbox for `cmtguh1t200015iu2lgmn6nrw`, confirm whether the immediate retry produced one or two delivered reminder messages, and then retain or clean up the disposable Unit 103 record only after the evidence has been preserved.
