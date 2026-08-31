@@ -7,6 +7,7 @@ const { prisma } = require("./lib/prisma");
 const { getObjectBuffer, putObjectBuffer } = require("./lib/storage");
 const { flattenEnvelope, sha256Hex } = require("./lib/pdf");
 const { sendSigningLinkEmail, sendCompletedDocumentEmail } = require("./lib/mail");
+const { createSendSigningLinkHandler } = require("./handlers/sendSigningLink");
 const { assertPublicWebhookTarget } = require("./lib/ssrfGuard");
 const { createDecipheriv, createHash, createHmac } = require("crypto");
 
@@ -14,52 +15,7 @@ const connection = new IORedis(process.env.REDIS_URL || "redis://redis:6379", {
   maxRetriesPerRequest: null,
 });
 
-async function handleSendSigningLink({ signerId }) {
-  const signer = await prisma.signer.findUnique({
-    where: { id: signerId },
-    include: { envelope: { include: { org: true } } },
-  });
-  if (!signer) return;
-
-  const appDomain = signer.envelope.org.customDomain || process.env.APP_DOMAIN || "localhost:3000";
-  const baseUrl = /^https?:\/\//i.test(appDomain) ? appDomain.replace(/\/$/, "") : `https://${appDomain.replace(/\/$/, "")}`;
-  const link = `${baseUrl}/sign/${signer.token}`;
-
-  try {
-    if (signer.email) {
-      await sendSigningLinkEmail({
-      to: signer.email,
-      signerName: signer.name,
-      documentTitle: signer.envelope.title,
-      link,
-      organisation: signer.envelope.org,
-      });
-    } else if (signer.phone) {
-    const message = `${signer.name}, ${signer.envelope.org.name} has asked you to sign "${signer.envelope.title}": ${link}`;
-    if (process.env.WHATSAPP_BUSINESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_API_VERSION) {
-      const response = await fetch(`https://graph.facebook.com/${process.env.WHATSAPP_API_VERSION}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
-        method: "POST",
-        headers: { authorization: `Bearer ${process.env.WHATSAPP_BUSINESS_TOKEN}`, "content-type": "application/json" },
-        body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: signer.phone.replace(/\D/g, ""), type: "text", text: { preview_url: false, body: message } }),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (!response.ok) throw new Error(`WhatsApp delivery failed with HTTP ${response.status}`);
-    } else {
-      const waLink = `https://wa.me/${signer.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
-      console.log("WhatsApp delivery (manual fallback):", waLink);
-    }
-    } else {
-      throw new Error("Signer has no email or phone");
-    }
-  } catch (error) {
-    await prisma.auditEvent.create({ data: { envelopeId: signer.envelopeId, signerId, eventType: "delivery_failed", metadata: { message: error instanceof Error ? error.message : String(error) } } });
-    throw error;
-  }
-
-  await prisma.auditEvent.create({
-    data: { envelopeId: signer.envelopeId, signerId, eventType: "sent" },
-  });
-}
+const handleSendSigningLink = createSendSigningLinkHandler({ prisma, sendSigningLinkEmail });
 
 async function handleSealDocument({ envelopeId }) {
   const envelope = await prisma.envelope.findUnique({

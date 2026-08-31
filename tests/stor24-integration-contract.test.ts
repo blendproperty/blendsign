@@ -7,7 +7,7 @@ const createRoute = fs.readFileSync("src/app/api/v1/envelopes/from-template/rout
 const documentRoute = fs.readFileSync("src/app/api/envelopes/[id]/document/route.ts", "utf8");
 const certificateRoute = fs.readFileSync("src/app/api/envelopes/[id]/certificate/route.ts", "utf8");
 const queue = fs.readFileSync("src/lib/queue.ts", "utf8");
-const worker = fs.readFileSync("worker/index.js", "utf8");
+const signingLinkHandler = fs.readFileSync("worker/handlers/sendSigningLink.js", "utf8");
 const schema = fs.readFileSync("prisma/schema.prisma", "utf8");
 
 test("Stor24 envelope creation requires a bounded idempotency key", () => {
@@ -47,8 +47,8 @@ test("resend retries are idempotent in both audit and queue identity", () => {
 });
 
 test("signing-provider outages are audited and retried with bounded backoff", () => {
-  assert.match(worker, /eventType: "delivery_failed"/);
-  assert.match(worker, /throw error/);
+  assert.match(signingLinkHandler, /eventType: "delivery_failed"/);
+  assert.match(signingLinkHandler, /throw error/);
   assert.match(queue, /"send-signing-link"[\s\S]*attempts: 5[\s\S]*backoff: \{ type: "exponential", delay: 3000 \}/);
 });
 
