@@ -157,10 +157,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </label>
             <button className="icon-button" aria-label="Notifications"><Icon name="bell" size={19} /></button>
             <div className="top-divider" />
-            <div className="account-switcher">
+            <div className="account-switcher" title={account.entities.length > 1 ? "Switch company" : undefined}>
               <span className="account-avatar">{activeLogo ? <img src={activeLogo} alt="" /> : account.entity.name.split(" ").map((word) => word[0]).join("").slice(0, 2).toUpperCase()}</span>
               <span className="account-copy"><strong>{account.entity.name}</strong><small>{account.user.name}</small></span>
-              <select aria-label="Active company" value={account.entity.id} onChange={(event) => selectEntity(event.target.value)}>
+              {account.entities.length > 1 && <Icon name="chevron" size={14} className="account-switcher-caret" />}
+              <select aria-label="Switch company" value={account.entity.id} onChange={(event) => selectEntity(event.target.value)} disabled={account.entities.length <= 1}>
                 {account.entities.map((entity) => <option value={entity.id} key={entity.id}>{entity.name}</option>)}
               </select>
             </div>
