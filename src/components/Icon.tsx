@@ -28,7 +28,8 @@ export type IconName =
   | "zoomOut"
   | "expand"
   | "certificate"
-  | "back";
+  | "back"
+  | "building";
 
 export function Icon({
   name,
@@ -70,6 +71,7 @@ export function Icon({
     expand: <><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></>,
     certificate: <><circle cx="12" cy="8" r="5"/><path d="m8.5 12-1 9 4.5-3 4.5 3-1-9"/><path d="m10 8 1.4 1.4L14.5 6"/></>,
     back: <path d="m15 18-6-6 6-6"/>,
+    building: <><path d="M6 21V4h9v17"/><path d="M15 21V9h6v12"/><path d="M9 8h2M9 11h2M9 14h2M9 17h2"/><path d="M3 21h18"/></>,
   };
 
   return (
