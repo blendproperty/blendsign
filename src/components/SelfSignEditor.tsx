@@ -53,6 +53,7 @@ export default function SelfSignEditor() {
   const drag = useRef<{ id: string; startX: number; startY: number; fieldX: number; fieldY: number; rect: DOMRect } | null>(null);
   const resize = useRef<{ id: string; direction: ResizeDirection; startX: number; startY: number; fieldX: number; fieldY: number; fieldWidth: number; fieldHeight: number; rect: DOMRect } | null>(null);
   const selected = useMemo(() => fields.find((field) => field.id === selectedId) || null, [fields, selectedId]);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings/profile")
@@ -224,7 +225,17 @@ export default function SelfSignEditor() {
       <section className="panel form-section self-sign-upload">
         <div className="section-heading"><span>1</span><div><h2>Add your document</h2><p>The original and completed PDF stay in the active company workspace.</p></div></div>
         <label className="field-label">Document title<input className="field-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Document name" /></label>
-        <label className={`upload-zone ${file ? "has-file" : ""}`}>
+        <label
+          className={`upload-zone ${file ? "has-file" : ""} ${isDragOver ? "is-drag-over" : ""}`}
+          onDragOver={(event) => { event.preventDefault(); setIsDragOver(true); }}
+          onDragLeave={(event) => { event.preventDefault(); setIsDragOver(false); }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setIsDragOver(false);
+            const dropped = Array.from(event.dataTransfer.files || []).find((item) => item.type === "application/pdf" || /\.pdf$/i.test(item.name));
+            if (dropped) choosePdf(dropped);
+          }}
+        >
           <input type="file" accept="application/pdf" onChange={(event) => { choosePdf(event.target.files?.[0] || null); event.currentTarget.value = ""; }} />
           <span className="upload-icon"><Icon name={file ? "file" : "upload"} size={28} /></span>
           {file ? <><strong>{file.name}</strong><small>{(file.size / 1024 / 1024).toFixed(2)} MB · PDF</small></> : <><strong>Drop your PDF here or browse</strong><small>PDF documents up to 20 MB</small></>}
