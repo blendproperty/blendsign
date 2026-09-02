@@ -7,6 +7,8 @@ import { getRequestContext } from "@/lib/account";
 const fieldSchema = z.object({
   signerIndex: z.number().int(), // index into `signers` array below
   type: z.enum(["SIGNATURE", "INITIALS", "DATE", "TEXT", "CHECKBOX"]),
+  label: z.string().max(120).optional(),
+  required: z.boolean().default(true),
   page: z.number().int().min(1),
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
@@ -77,6 +79,8 @@ export async function POST(req: NextRequest) {
         envelopeId: envelope.id,
         signerId: envelope.signers[f.signerIndex].id,
         type: f.type,
+        label: f.label || null,
+        required: f.required,
         page: f.page,
         x: f.x,
         y: f.y,
