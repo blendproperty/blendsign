@@ -36,6 +36,25 @@ function defaultSize(type: FieldType) {
   return { width: 0.22, height: 0.05 };
 }
 
+// Renders the PDF at the width of whatever container holds it, so the page
+// shrinks to fit narrower windows/phones instead of being clipped at a fixed
+// 720px. Capped at 720 so it never renders larger than the original design.
+function usePageWidth(maxWidth = 720) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(maxWidth);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setWidth(Math.max(240, Math.min(maxWidth, Math.floor(entry.contentRect.width))));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [maxWidth]);
+  return { ref, width };
+}
+
 export default function SelfSignEditor() {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -54,6 +73,7 @@ export default function SelfSignEditor() {
   const resize = useRef<{ id: string; direction: ResizeDirection; startX: number; startY: number; fieldX: number; fieldY: number; fieldWidth: number; fieldHeight: number; rect: DOMRect } | null>(null);
   const selected = useMemo(() => fields.find((field) => field.id === selectedId) || null, [fields, selectedId]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const { ref: pageWidthRef, width: pageWidth } = usePageWidth();
 
   useEffect(() => {
     fetch("/api/settings/profile")
@@ -251,8 +271,8 @@ export default function SelfSignEditor() {
             {selected && <div className="builder-section selected-field-panel"><div className="builder-section-title"><h3>Selected field</h3><button type="button" className="text-button text-button--danger" onClick={removeSelected}>Delete</button></div><p>{selected.type.toLowerCase()} · page {selected.page}</p><div className="resize-hint">Drag the field to move it. Use a corner handle to resize it.</div></div>}
             <dl className="self-sign-field-count"><div><dt>Fields</dt><dd>{fields.length}</dd></div><div><dt>Pages</dt><dd>{numPages || "–"}</dd></div></dl>
           </aside>
-          <div className="template-document-workspace self-sign-document">
-            {!file ? <div className="panel template-editor-empty"><Icon name="file" size={42} /><h2>Select a PDF first</h2><p>Your document pages will appear here.</p></div> : <Document file={file} onLoadSuccess={({ numPages: pages }) => setNumPages(pages)} loading={<div className="panel template-editor-empty">Loading PDF…</div>}>{Array.from({ length: numPages }, (_, pageIndex) => { const page = pageIndex + 1; return <div className="template-page-wrap" key={page}><div className="template-page-number">Page {page}</div><div className="template-pdf-page" onClick={(event) => placeField(event, page)}><Page pageNumber={page} width={720} renderAnnotationLayer={false} renderTextLayer={false} /><div className="template-field-layer">{fields.filter((field) => field.page === page).map((field) => <button key={field.id} type="button" className={`placed-template-field self-sign-placed-field ${selectedId === field.id ? "is-selected" : ""}`} style={{ left: `${field.x * 100}%`, top: `${field.y * 100}%`, width: `${field.width * 100}%`, height: `${field.height * 100}%` }} onClick={(event) => event.stopPropagation()} onPointerDown={(event) => startDrag(event, field)} onPointerMove={moveDrag} onPointerUp={() => { drag.current = null; }}>{field.type.toLowerCase()}{selectedId === field.id && (["nw", "ne", "sw", "se"] as ResizeDirection[]).map((direction) => <span key={direction} className={`field-resize-handle field-resize-handle--${direction}`} aria-hidden="true" onPointerDown={(event) => startResize(event, field, direction)} onPointerMove={moveResize} onPointerUp={stopResize} onPointerCancel={stopResize} />)}</button>)}</div></div></div>; })}</Document>}
+          <div className="template-document-workspace self-sign-document" ref={pageWidthRef}>
+            {!file ? <div className="panel template-editor-empty"><Icon name="file" size={42} /><h2>Select a PDF first</h2><p>Your document pages will appear here.</p></div> : <Document file={file} onLoadSuccess={({ numPages: pages }) => setNumPages(pages)} loading={<div className="panel template-editor-empty">Loading PDF…</div>}>{Array.from({ length: numPages }, (_, pageIndex) => { const page = pageIndex + 1; return <div className="template-page-wrap" key={page}><div className="template-page-number">Page {page}</div><div className="template-pdf-page" onClick={(event) => placeField(event, page)}><Page pageNumber={page} width={pageWidth} renderAnnotationLayer={false} renderTextLayer={false} /><div className="template-field-layer">{fields.filter((field) => field.page === page).map((field) => <button key={field.id} type="button" className={`placed-template-field self-sign-placed-field ${selectedId === field.id ? "is-selected" : ""}`} style={{ left: `${field.x * 100}%`, top: `${field.y * 100}%`, width: `${field.width * 100}%`, height: `${field.height * 100}%` }} onClick={(event) => event.stopPropagation()} onPointerDown={(event) => startDrag(event, field)} onPointerMove={moveDrag} onPointerUp={() => { drag.current = null; }}>{field.type.toLowerCase()}{selectedId === field.id && (["nw", "ne", "sw", "se"] as ResizeDirection[]).map((direction) => <span key={direction} className={`field-resize-handle field-resize-handle--${direction}`} aria-hidden="true" onPointerDown={(event) => startResize(event, field, direction)} onPointerMove={moveResize} onPointerUp={stopResize} onPointerCancel={stopResize} />)}</button>)}</div></div></div>; })}</Document>}
           </div>
         </div>
       </section>

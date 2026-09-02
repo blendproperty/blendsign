@@ -621,12 +621,12 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .selected-field-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .selected-field-grid label { display: grid; gap: 4px; color: var(--muted); font-size: 8px; }
 .selected-field-grid input { width: 100%; height: 31px; padding: 0 5px; border: 1px solid var(--line); border-radius: 5px; }
-.template-document-workspace { min-width: 0; overflow-x: auto; padding-bottom: 40px; }
+.template-document-workspace { min-width: 0; width: 100%; overflow-x: auto; padding-bottom: 40px; }
 .template-editor-empty { min-height: 480px; display: grid; place-items: center; align-content: center; gap: 10px; color: var(--muted); text-align: center; }
 .template-editor-empty h2, .template-editor-empty p { margin: 0; }
-.template-page-wrap { width: 760px; margin: 0 auto 26px; }
+.template-page-wrap { width: 100%; max-width: 760px; margin: 0 auto 26px; }
 .template-page-number { margin-bottom: 7px; color: var(--muted); font-family: "Geist Mono", monospace; font-size: 9px; text-transform: uppercase; }
-.template-pdf-page { position: relative; width: 720px; overflow: hidden; background: #fff; box-shadow: 0 12px 36px rgba(7,24,57,.12); cursor: crosshair; }
+.template-pdf-page { position: relative; width: 100%; max-width: 720px; margin: 0 auto; overflow: hidden; background: #fff; box-shadow: 0 12px 36px rgba(7,24,57,.12); cursor: crosshair; }
 .template-pdf-page .react-pdf__Page, .template-pdf-page canvas { display: block; }
 .template-field-layer { position: absolute; inset: 0; pointer-events: none; }
 .placed-template-field { position: absolute; z-index: 2; display: grid; place-items: center; align-content: center; padding: 2px; overflow: visible; border: 2px solid; border-radius: 5px; color: var(--ink); font-size: 9px; font-weight: 800; line-height: 1; text-transform: uppercase; cursor: grab; pointer-events: auto; touch-action: none; }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Document, Page, pdfjs } from "react-pdf";
@@ -55,6 +55,25 @@ function defaultSize(type: FieldType) {
   return { width: 0.2, height: 0.05 };
 }
 
+// Renders the PDF at the width of whatever container holds it, so the page
+// shrinks to fit narrower windows/phones instead of being clipped at a fixed
+// 720px. Capped at 720 so it never renders larger than the original design.
+function usePageWidth(maxWidth = 720) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(maxWidth);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setWidth(Math.max(240, Math.min(maxWidth, Math.floor(entry.contentRect.width))));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [maxWidth]);
+  return { ref, width };
+}
+
 function toApiIdentifier(value: string) {
   return value
     .toLowerCase()
@@ -81,6 +100,7 @@ export default function TemplateEditor({ initial }: { initial?: InitialTemplate 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const { ref: pageWidthRef, width: pageWidth } = usePageWidth();
   const drag = useRef<{ id: string; startX: number; startY: number; fieldX: number; fieldY: number; rect: DOMRect } | null>(null);
   const resize = useRef<{
     id: string;
@@ -291,8 +311,8 @@ export default function TemplateEditor({ initial }: { initial?: InitialTemplate 
           {error && <div className="form-error">{error}</div>}
           <button className="button button--accent button--full" type="button" disabled={busy} onClick={save}>{busy ? "Saving…" : initial ? "Update template" : "Save template"}</button>
         </aside>
-        <section className="template-document-workspace">
-          {!documentSource ? <div className="panel template-editor-empty"><Icon name="file" size={42} /><h2>Select a PDF to begin</h2><p>The document pages and field placement canvas will appear here.</p></div> : <Document file={documentSource} onLoadSuccess={({ numPages: pages }) => setNumPages(pages)} loading={<div className="panel template-editor-empty">Loading PDF…</div>}>{Array.from({ length: numPages }, (_, pageIndex) => { const page = pageIndex + 1; return <div className="template-page-wrap" key={page}><div className="template-page-number">Page {page}</div><div className="template-pdf-page" onClick={(event) => placeField(event, page)}><Page pageNumber={page} width={720} renderAnnotationLayer={false} renderTextLayer={false} /><div className="template-field-layer">{fields.filter((field) => field.page === page).map((field) => <button key={field.id} type="button" className={`placed-template-field ${selectedId === field.id ? "is-selected" : ""}`} style={{ left: `${field.x * 100}%`, top: `${field.y * 100}%`, width: `${field.width * 100}%`, height: `${field.height * 100}%`, borderColor: roleColours[field.roleIndex % roleColours.length], background: `${roleColours[field.roleIndex % roleColours.length]}22` }} onClick={(event) => event.stopPropagation()} onPointerDown={(event) => startDrag(event, field)} onPointerMove={moveDrag} onPointerUp={() => { drag.current = null; }}>{field.label || field.type.toLowerCase()}<small>{field.dataKey || roles[field.roleIndex]?.name}</small>{selectedId === field.id && (["nw", "ne", "sw", "se"] as ResizeDirection[]).map((direction) => <span key={direction} className={`field-resize-handle field-resize-handle--${direction}`} aria-hidden="true" onPointerDown={(event) => startResize(event, field, direction)} onPointerMove={moveResize} onPointerUp={stopResize} onPointerCancel={stopResize} />)}</button>)}</div></div></div>; })}</Document>}
+        <section className="template-document-workspace" ref={pageWidthRef}>
+          {!documentSource ? <div className="panel template-editor-empty"><Icon name="file" size={42} /><h2>Select a PDF to begin</h2><p>The document pages and field placement canvas will appear here.</p></div> : <Document file={documentSource} onLoadSuccess={({ numPages: pages }) => setNumPages(pages)} loading={<div className="panel template-editor-empty">Loading PDF…</div>}>{Array.from({ length: numPages }, (_, pageIndex) => { const page = pageIndex + 1; return <div className="template-page-wrap" key={page}><div className="template-page-number">Page {page}</div><div className="template-pdf-page" onClick={(event) => placeField(event, page)}><Page pageNumber={page} width={pageWidth} renderAnnotationLayer={false} renderTextLayer={false} /><div className="template-field-layer">{fields.filter((field) => field.page === page).map((field) => <button key={field.id} type="button" className={`placed-template-field ${selectedId === field.id ? "is-selected" : ""}`} style={{ left: `${field.x * 100}%`, top: `${field.y * 100}%`, width: `${field.width * 100}%`, height: `${field.height * 100}%`, borderColor: roleColours[field.roleIndex % roleColours.length], background: `${roleColours[field.roleIndex % roleColours.length]}22` }} onClick={(event) => event.stopPropagation()} onPointerDown={(event) => startDrag(event, field)} onPointerMove={moveDrag} onPointerUp={() => { drag.current = null; }}>{field.label || field.type.toLowerCase()}<small>{field.dataKey || roles[field.roleIndex]?.name}</small>{selectedId === field.id && (["nw", "ne", "sw", "se"] as ResizeDirection[]).map((direction) => <span key={direction} className={`field-resize-handle field-resize-handle--${direction}`} aria-hidden="true" onPointerDown={(event) => startResize(event, field, direction)} onPointerMove={moveResize} onPointerUp={stopResize} onPointerCancel={stopResize} />)}</button>)}</div></div></div>; })}</Document>}
         </section>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Document, Page, pdfjs } from "react-pdf";
@@ -32,6 +32,25 @@ const fieldTypes: { type: FieldType; label: string }[] = [
   { type: "CHECKBOX", label: "Checkbox" },
 ];
 const signerColours = ["#229d6c", "#007aff", "#b66a1c", "#7b4db3", "#c54343"];
+
+// Renders the PDF at the width of whatever container holds it, so the page
+// shrinks to fit narrower windows/phones instead of being clipped at a fixed
+// 720px. Capped at 720 so it never renders larger than the original design.
+function usePageWidth(maxWidth = 720) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(maxWidth);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setWidth(Math.max(240, Math.min(maxWidth, Math.floor(entry.contentRect.width))));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [maxWidth]);
+  return { ref, width };
+}
 
 function defaultSize(type: FieldType) {
   if (type === "SIGNATURE") return { width: 0.28, height: 0.08 };
@@ -87,6 +106,7 @@ function NewEnvelopeForm() {
   const drag = useRef<{ id: string; startX: number; startY: number; fieldX: number; fieldY: number; rect: DOMRect } | null>(null);
   const resize = useRef<{ id: string; direction: ResizeDirection; startX: number; startY: number; fieldX: number; fieldY: number; fieldWidth: number; fieldHeight: number; rect: DOMRect } | null>(null);
   const selected = useMemo(() => fields.find((field) => field.id === selectedId) || null, [fields, selectedId]);
+  const { ref: pageWidthRef, width: pageWidth } = usePageWidth();
   const { isDragOver, handlers: dropHandlers } = useFileDrop((nextFile) => {
     if (fields.length && !window.confirm("Replacing the PDF will remove all placed fields. Continue?")) return;
     setFile(nextFile);
@@ -323,7 +343,7 @@ function NewEnvelopeForm() {
                   )}
                   <dl className="self-sign-field-count"><div><dt>Fields</dt><dd>{fields.length}</dd></div><div><dt>Pages</dt><dd>{numPages || "–"}</dd></div></dl>
                 </aside>
-                <section className="template-document-workspace">
+                <section className="template-document-workspace" ref={pageWidthRef}>
                   <Document file={file} onLoadSuccess={({ numPages: pages }) => setNumPages(pages)} loading={<div className="panel template-editor-empty">Loading PDF…</div>}>
                     {Array.from({ length: numPages }, (_, pageIndex) => {
                       const page = pageIndex + 1;
@@ -331,7 +351,7 @@ function NewEnvelopeForm() {
                         <div className="template-page-wrap" key={page}>
                           <div className="template-page-number">Page {page}</div>
                           <div className="template-pdf-page" onClick={(event) => placeField(event, page)}>
-                            <Page pageNumber={page} width={720} renderAnnotationLayer={false} renderTextLayer={false} />
+                            <Page pageNumber={page} width={pageWidth} renderAnnotationLayer={false} renderTextLayer={false} />
                             <div className="template-field-layer">
                               {fields.filter((field) => field.page === page).map((field) => (
                                 <button
