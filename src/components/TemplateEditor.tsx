@@ -80,6 +80,7 @@ export default function TemplateEditor({ initial }: { initial?: InitialTemplate 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const drag = useRef<{ id: string; startX: number; startY: number; fieldX: number; fieldY: number; rect: DOMRect } | null>(null);
   const resize = useRef<{
     id: string;
@@ -251,7 +252,17 @@ export default function TemplateEditor({ initial }: { initial?: InitialTemplate 
           <label className="field-label">Template identifier<input className="field-input template-api-key" value={apiIdentifier} readOnly={Boolean(initial && !initial.canEditIdentifier)} onChange={(event) => { setIdentifierEdited(true); setApiIdentifier(toApiIdentifier(event.target.value)); }} placeholder="stor24-unit-lease" /><span>Public document name used in API URLs. Example: stor24-unit-lease. Never paste a company API secret here.</span></label>
           <label className="field-label">Description<textarea className="field-input field-textarea template-description" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Approved reusable agreement" /></label>
           <label className="template-availability"><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} /><span><strong>Template active</strong><small>{initial ? `Revision ${initial.version}. Saving creates revision ${initial.version + 1}.` : "Available to create signing requests after it is saved."}</small></span></label>
-          <label className={`upload-zone template-upload ${documentSource ? "has-file" : ""}`}><input type="file" accept="application/pdf" onChange={(event) => { choosePdf(event.target.files?.[0] || null); event.currentTarget.value = ""; }} /><Icon name={documentSource ? "file" : "upload"} size={24} /><strong>{file?.name || (initial ? "Replace template PDF" : "Choose template PDF")}</strong>{initial && !file && <small>Current PDF and {fields.length} placements loaded</small>}{initial && file && <small>{fields.length} placements preserved — review alignment before saving</small>}</label>
+          <label
+            className={`upload-zone template-upload ${documentSource ? "has-file" : ""} ${isDragOver ? "is-drag-over" : ""}`}
+            onDragOver={(event) => { event.preventDefault(); setIsDragOver(true); }}
+            onDragLeave={(event) => { event.preventDefault(); setIsDragOver(false); }}
+            onDrop={(event) => {
+              event.preventDefault();
+              setIsDragOver(false);
+              const dropped = Array.from(event.dataTransfer.files || []).find((item) => item.type === "application/pdf" || /\.pdf$/i.test(item.name));
+              if (dropped) choosePdf(dropped);
+            }}
+          ><input type="file" accept="application/pdf" onChange={(event) => { choosePdf(event.target.files?.[0] || null); event.currentTarget.value = ""; }} /><Icon name={documentSource ? "file" : "upload"} size={24} /><strong>{file?.name || (initial ? "Replace template PDF" : "Choose template PDF")}</strong>{initial && !file && <small>Current PDF and {fields.length} placements loaded</small>}{initial && file && <small>{fields.length} placements preserved — review alignment before saving</small>}</label>
           <div className="builder-section"><div className="builder-section-title"><h3>Signer roles</h3><button type="button" className="text-button" onClick={() => setRoles((items) => [...items, { name: `Signer ${items.length + 1}`, order: items.length }])}>+ Add</button></div>{roles.map((role, index) => <div className={`role-editor ${activeRole === index ? "is-active" : ""}`} key={index} onClick={() => setActiveRole(index)}><span style={{ background: roleColours[index % roleColours.length] }} /><input value={role.name} aria-label={`Signer role ${index + 1}`} onChange={(event) => setRoles((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} /><input type="number" min="0" value={role.order} title="Signing order" onChange={(event) => setRoles((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, order: Number(event.target.value) } : item))} /><button type="button" className="role-remove" aria-label={`Remove ${role.name}`} onClick={(event) => { event.stopPropagation(); removeRole(index); }}>×</button></div>)}</div>
           <div className="builder-section"><h3>Field to place</h3><div className="field-tool-grid">{fieldTypes.map((item) => <button type="button" className={activeType === item.type ? "is-active" : ""} key={item.type} onClick={() => setActiveType(item.type)}>{item.label}</button>)}</div></div>
           {selected && (
