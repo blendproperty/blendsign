@@ -16,6 +16,7 @@ type PlacedField = {
   id: string;
   signerIndex: number;
   type: FieldType;
+  label: string;
   page: number;
   x: number;
   y: number;
@@ -112,10 +113,12 @@ function NewEnvelopeForm() {
     if (!file) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const size = defaultSize(activeType);
+    const typeLabel = fieldTypes.find((item) => item.type === activeType)?.label || "Field";
     const field: PlacedField = {
       id: crypto.randomUUID(),
       signerIndex: activeSigner,
       type: activeType,
+      label: activeType === "TEXT" || activeType === "CHECKBOX" || activeType === "DATE" ? typeLabel : "",
       page,
       x: Math.max(0, Math.min(1 - size.width, (event.clientX - rect.left) / rect.width - size.width / 2)),
       y: Math.max(0, Math.min(1 - size.height, (event.clientY - rect.top) / rect.height - size.height / 2)),
@@ -191,6 +194,11 @@ function NewEnvelopeForm() {
     setSelectedId(null);
   }
 
+  function updateSelected(patch: Partial<PlacedField>) {
+    if (!selectedId) return;
+    setFields((items) => items.map((field) => field.id === selectedId ? { ...field, ...patch } : field));
+  }
+
   async function submit() {
     if (!file) return setError("Choose a PDF first");
     if (file.size > 20 * 1024 * 1024) return setError("PDF documents may not exceed 20 MB.");
@@ -222,6 +230,7 @@ function NewEnvelopeForm() {
           fields: fields.map((field) => ({
             signerIndex: field.signerIndex,
             type: field.type,
+            label: field.label || undefined,
             page: field.page,
             x: field.x,
             y: field.y,
@@ -306,6 +315,9 @@ function NewEnvelopeForm() {
                       <div className="builder-section-title"><h3>Selected field</h3><button type="button" className="text-button text-button--danger" onClick={removeSelected}>Delete</button></div>
                       <p>{selected.type.toLowerCase()} for {signers[selected.signerIndex]?.name || `Signer ${selected.signerIndex + 1}`}</p>
                       <div className="resize-hint">Drag a corner handle on the PDF to resize this box.</div>
+                      {selected.type !== "SIGNATURE" && selected.type !== "INITIALS" ? (
+                        <label className="field-label">Field name<input className="field-input" value={selected.label} maxLength={120} onChange={(event) => updateSelected({ label: event.target.value })} placeholder={selected.type === "CHECKBOX" ? "e.g. I agree to the terms" : selected.type === "DATE" ? "e.g. Start date" : "e.g. ID number"} /></label>
+                      ) : <p className="field-binding-note">Signature and initials are captured directly, so they don't need a name.</p>}
                       <label className="field-label">Assigned signer<select className="field-input" value={selected.signerIndex} onChange={(event) => setFields((items) => items.map((field) => field.id === selected.id ? { ...field, signerIndex: Number(event.target.value) } : field))}>{signers.map((signer, index) => <option value={index} key={index}>{signer.name || `Signer ${index + 1}`}</option>)}</select></label>
                     </div>
                   )}
@@ -332,7 +344,7 @@ function NewEnvelopeForm() {
                                   onPointerMove={moveDrag}
                                   onPointerUp={() => { drag.current = null; }}
                                 >
-                                  {field.type.toLowerCase()}
+                                  {field.label || field.type.toLowerCase()}
                                   <small>{signers[field.signerIndex]?.name || `Signer ${field.signerIndex + 1}`}</small>
                                   {selectedId === field.id && (["nw", "ne", "sw", "se"] as ResizeDirection[]).map((direction) => (
                                     <span key={direction} className={`field-resize-handle field-resize-handle--${direction}`} aria-hidden="true" onPointerDown={(event) => startResize(event, field, direction)} onPointerMove={moveResize} onPointerUp={stopResize} onPointerCancel={stopResize} />
