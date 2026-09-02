@@ -36,6 +36,7 @@ const nav: NavItem[] = [
   { label: "Templates", href: "/templates", icon: "template" },
   { label: "SignForms", href: "/signforms", icon: "link" },
   { label: "Reports", href: "/reports", icon: "report" },
+  { label: "Companies", href: "/settings/entities", icon: "building" },
   {
     label: "Settings",
     href: "/settings",
@@ -46,7 +47,6 @@ const nav: NavItem[] = [
       { label: "Contacts", href: "/settings/contacts" },
       { label: "Trash", href: "/settings/trash" },
       { heading: "Admin", label: "Users and access", href: "/settings/users" },
-      { label: "Companies", href: "/settings/entities" },
       { label: "Branding", href: "/settings/branding" },
     ],
   },
