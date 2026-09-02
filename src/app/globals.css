@@ -273,8 +273,11 @@ button { color: inherit; }
 .icon-button { width: 38px; height: 38px; display: grid; place-items: center; padding: 0; background: transparent; border: 0; border-radius: 7px; cursor: pointer; }
 .icon-button:hover { background: #efede8; }
 .top-divider { width: 1px; height: 28px; background: #dedbd5; }
-.account-switcher { display: flex; align-items: center; gap: 10px; padding: 4px 0 4px 4px; background: transparent; border: 0; cursor: pointer; }
-.account-switcher select { width: 22px; height: 32px; border: 0; outline: 0; background: transparent; color: transparent; cursor: pointer; }
+.account-switcher { position: relative; display: flex; align-items: center; gap: 10px; padding: 4px 10px 4px 4px; border: 1px solid transparent; border-radius: 999px; background: transparent; cursor: pointer; }
+.account-switcher:has(select:not(:disabled)):hover { border-color: var(--line); background: #f6f5f2; }
+.account-switcher-caret { flex: 0 0 auto; margin-left: 2px; color: var(--muted); transform: rotate(90deg); }
+.account-switcher select { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; outline: 0; opacity: 0; cursor: pointer; }
+.account-switcher select:disabled { cursor: default; pointer-events: none; }
 .account-switcher select option { color: var(--ink); }
 .account-avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: #fff; font-size: 11px; font-weight: 700; }
 .account-avatar img { width: 100%; height: 100%; padding: 5px; border-radius: inherit; background: #fff; object-fit: contain; }
@@ -476,7 +479,6 @@ a.stat-card:hover { border-color: #bbb6ad; }
 .upload-zone small { color: var(--muted); font-size: 10px; }
 .upload-icon { width: 47px; height: 47px; display: grid; place-items: center; margin-bottom: 5px; border-radius: 50%; background: var(--brand-accent-soft); color: var(--brand-accent-dark); }
 .upload-zone.has-file { border-style: solid; border-color: #bfcdbf; background: #f8fbf8; }
-.upload-zone.is-drag-over { border-style: solid; border-color: var(--brand-accent); background: #f0f9f5; }
 .signer-list { display: grid; gap: 10px; }
 .signer-card { position: relative; display: grid; grid-template-columns: 36px 1fr 1fr 75px; align-items: end; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 7px; background: #fbfaf8; }
 .signer-number { align-self: center; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: #ebe7df; color: #5f5a51; font-size: 11px; font-weight: 800; }
