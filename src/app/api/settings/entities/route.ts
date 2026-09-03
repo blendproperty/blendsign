@@ -13,8 +13,11 @@ const entitySchema = z.object({
 export async function GET() {
   const context = await getRequestContext();
   if (!context) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-  if (!context.session.superAdmin) return NextResponse.json({ error: "Only the BlendSign administrator can create companies." }, { status: 403 });
-  return NextResponse.json({ entities: await listAccessibleOrgs(), activeId: context.org.id });
+  return NextResponse.json({
+    entities: await listAccessibleOrgs(),
+    activeId: context.org.id,
+    canCreate: context.session.superAdmin,
+  });
 }
 
 export async function POST(request: NextRequest) {
