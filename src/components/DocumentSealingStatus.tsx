@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 
-export default function DocumentSealingStatus({ id }: { id: string }) {
+export default function DocumentSealingStatus({ id, status }: { id: string; status: string }) {
   const router = useRouter();
 
   useEffect(() => {
@@ -24,5 +24,6 @@ export default function DocumentSealingStatus({ id }: { id: string }) {
     return () => window.clearInterval(timer);
   }, [id, router]);
 
-  return <section className="panel document-pending"><Icon name="clock" size={30} /><h2>Preparing the signed PDF</h2><p>This page will update automatically.</p></section>;
+  const awaitingSignatures = status === "SENT" || status === "PARTIALLY_SIGNED";
+  return <section className="panel document-pending"><Icon name="clock" size={30} /><h2>{awaitingSignatures ? "Awaiting signatures" : "Preparing the signed PDF"}</h2><p>{awaitingSignatures ? "Use the reminder controls above if a recipient needs a prompt." : "This page will update automatically."}</p></section>;
 }
