@@ -1,46 +1,93 @@
 import Link from "next/link";
+import { EnvelopeStatus, Prisma } from "@prisma/client";
 import { Icon } from "@/components/Icon";
 import { prisma } from "@/lib/prisma";
 import { getRequestContext } from "@/lib/account";
 import { redirect } from "next/navigation";
 import DocumentActions from "@/components/DocumentActions";
+import DocumentFilters from "@/components/DocumentFilters";
 
 export const dynamic = "force-dynamic";
+const PAGE_SIZE = 20;
 
-const labels: Record<string, string> = {
-  scheduled: "Scheduled",
-  "in-progress": "In progress",
-  completed: "Completed",
-  declined: "Declined",
-  expired: "Expired",
-  recalled: "Recalled",
-  draft: "Draft",
-  bulk: "Bulk send",
-  action: "Needs your action",
+const legacyStatuses: Record<string, EnvelopeStatus[]> = {
+  "in-progress": ["SENT", "PARTIALLY_SIGNED"],
+  completed: ["COMPLETED"],
+  declined: ["DECLINED"],
+  expired: ["EXPIRED"],
+  recalled: ["VOIDED"],
+  draft: ["DRAFT"],
 };
 
-export default async function Documents({ searchParams }: { searchParams: { status?: string } }) {
+type SearchParams = { q?: string; status?: string; from?: string; to?: string; page?: string };
+
+function parseStatuses(value?: string) {
+  if (!value) return [];
+  if (legacyStatuses[value]) return legacyStatuses[value];
+  const allowed = new Set(Object.values(EnvelopeStatus));
+  return Array.from(new Set(value.split(",").filter((status): status is EnvelopeStatus => allowed.has(status as EnvelopeStatus))));
+}
+
+function parseDate(value: string | undefined, endOfDay = false) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
+  const date = new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function pageHref(searchParams: SearchParams, page: number) {
+  const params = new URLSearchParams();
+  Object.entries(searchParams).forEach(([key, value]) => {
+    if (value && key !== "page") params.set(key, value);
+  });
+  params.set("page", String(page));
+  return `/documents?${params.toString()}`;
+}
+
+export default async function Documents({ searchParams }: { searchParams: SearchParams }) {
   const context = await getRequestContext();
   if (!context) redirect("/login");
+
+  const query = searchParams.q?.trim().slice(0, 160) || "";
+  const statuses = parseStatuses(searchParams.status);
+  const from = parseDate(searchParams.from);
+  const to = parseDate(searchParams.to, true);
+  const requestedPage = Math.max(1, Number.parseInt(searchParams.page || "1", 10) || 1);
+  const where: Prisma.EnvelopeWhereInput = {
+    orgId: context.org.id,
+    deletedAt: null,
+    ...(statuses.length ? { status: { in: statuses } } : {}),
+    ...(from || to ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
+    ...(query ? {
+      OR: [
+        { title: { contains: query, mode: "insensitive" } },
+        { createdBy: { is: { name: { contains: query, mode: "insensitive" } } } },
+        { signers: { some: { OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { email: { contains: query, mode: "insensitive" } },
+        ] } } },
+      ],
+    } : {}),
+  };
+
+  const total = await prisma.envelope.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(requestedPage, totalPages);
   const envelopes = await prisma.envelope.findMany({
-    where: { orgId: context.org.id, deletedAt: null },
+    where,
     orderBy: { createdAt: "desc" },
     include: { signers: true, createdBy: true },
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
   });
-  const heading = searchParams.status ? labels[searchParams.status] ?? "Documents" : "All documents";
 
   return (
     <div className="page">
       <section className="page-heading page-heading--row">
-        <div><p className="eyebrow">Document workspace</p><h1>{heading}</h1><p>Track every document sent through BlendSign.</p></div>
+        <div><p className="eyebrow">Document workspace</p><h1>All documents</h1><p>Track every document sent through BlendSign.</p></div>
         <Link href="/new" className="button button--dark"><Icon name="plus" size={18} /> New document</Link>
       </section>
-
       <section className="panel documents-panel">
-        <div className="table-toolbar">
-          <div className="table-search"><Icon name="search" size={17} /><input placeholder="Search by document or recipient" /></div>
-          <div className="toolbar-actions"><button className="button button--quiet">Status <span>⌄</span></button><button className="button button--quiet">Date <span>⌄</span></button></div>
-        </div>
+        <DocumentFilters key={[query, statuses.join(","), searchParams.from, searchParams.to].join("|")} initial={{ q: query, statuses, from: searchParams.from || "", to: searchParams.to || "" }} />
         <div className="table-wrap">
           <table className="documents-table">
             <thead><tr><th>Document name</th><th>Owner</th><th>Recipients</th><th>Status</th><th>Created</th><th aria-label="Actions" /></tr></thead>
@@ -58,15 +105,15 @@ export default async function Documents({ searchParams }: { searchParams: { stat
             </tbody>
           </table>
         </div>
-        {envelopes.length === 0 && (
-          <div className="empty-state empty-state--table">
-            <span><Icon name="documents" size={30} /></span>
-            <h3>No documents found</h3>
-            <p>Documents in this view will appear here once they are created.</p>
-            <Link href="/new" className="button button--outline">Create a document</Link>
+        {envelopes.length === 0 && <div className="empty-state empty-state--table"><span><Icon name="documents" size={30} /></span><h3>No documents match these filters</h3><p>Change or clear the filters to see more documents.</p><Link href="/documents" className="button button--outline">Clear filters</Link></div>}
+        <div className="table-footer">
+          <span>{total ? `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)} of ${total} documents` : "Showing 0 documents"}</span>
+          <div>
+            {page > 1 ? <Link href={pageHref(searchParams, page - 1)}>Previous</Link> : <button disabled>Previous</button>}
+            <span>{page} of {totalPages}</span>
+            {page < totalPages ? <Link href={pageHref(searchParams, page + 1)}>Next</Link> : <button disabled>Next</button>}
           </div>
-        )}
-        <div className="table-footer"><span>Showing {envelopes.length} document{envelopes.length === 1 ? "" : "s"}</span><div><button disabled>Previous</button><span>1</span><button disabled>Next</button></div></div>
+        </div>
       </section>
     </div>
   );

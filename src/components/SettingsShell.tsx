@@ -11,7 +11,6 @@ const groups: { title: string; items: { label: string; href: string; icon: IconN
     { label: "Trash", href: "/settings/trash", icon: "file" },
   ] },
   { title: "Company administration", items: [
-    { label: "Companies", href: "/settings/entities", icon: "home" },
     { label: "Users and access", href: "/settings/users", icon: "shield" },
     { label: "Branding and legal", href: "/settings/branding", icon: "template" },
     { label: "Integrations and API", href: "/settings/integrations", icon: "link" },
