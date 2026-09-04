@@ -4,8 +4,10 @@ import { Icon } from "@/components/Icon";
 import DocumentDetailActions from "@/components/DocumentDetailActions";
 import DocumentSealingStatus from "@/components/DocumentSealingStatus";
 import SignedPdfViewer from "@/components/SignedPdfViewer";
+import SigningReminderButton from "@/components/SigningReminderButton";
 import { getRequestContext } from "@/lib/account";
 import { prisma } from "@/lib/prisma";
+import { eligibleSigningReminderRecipients } from "@/lib/resendSigning";
 
 export const dynamic = "force-dynamic";
 
@@ -33,17 +35,18 @@ export default async function DocumentDetail({ params }: { params: { id: string 
   if (!envelope) notFound();
 
   const completedAt = envelope.auditEvents.find((event) => event.eventType === "completed")?.createdAt;
+  const reminderRecipientIds = new Set(eligibleSigningReminderRecipients(envelope.signers).map((signer) => signer.id));
 
   return (
     <div className="document-detail-page">
       <div className="document-detail-back"><Link href="/documents"><Icon name="back" size={17} /> All documents</Link></div>
-      {envelope.signedKey && <DocumentDetailActions id={envelope.id} title={envelope.title} />}
+      <DocumentDetailActions id={envelope.id} title={envelope.title} signed={Boolean(envelope.signedKey)} canRemind={reminderRecipientIds.size > 0} />
 
       <section className="document-detail-summary">
         <div className="document-detail-file">
           <span><Icon name="file" size={30} /></span>
           <div>
-            <p className="eyebrow">Completed document</p>
+            <p className="eyebrow">{envelope.status === "COMPLETED" ? "Completed document" : "Signing request"}</p>
             <h1>{envelope.title}</h1>
             <p>Owned by {envelope.createdBy.name}</p>
             <dl>
@@ -70,7 +73,7 @@ export default async function DocumentDetail({ params }: { params: { id: string 
           const accessEvent = signed || viewed;
           return (
             <div className="recipient-status-row" key={signer.id}>
-              <div className="recipient-status-person"><span>{signer.name.slice(0, 1).toUpperCase()}</span><p><strong>{signer.name}</strong><small>{signer.email || signer.phone || "No delivery address"}</small>{accessEvent?.ip && <em>Accessed from IP {accessEvent.ip} on {formatDate(accessEvent.createdAt)}</em>}</p></div>
+              <div className="recipient-status-person"><span>{signer.name.slice(0, 1).toUpperCase()}</span><p><strong>{signer.name}</strong><small>{signer.email || signer.phone || "No delivery address"}</small>{accessEvent?.ip && <em>Accessed from IP {accessEvent.ip} on {formatDate(accessEvent.createdAt)}</em>}</p>{reminderRecipientIds.has(signer.id) && <SigningReminderButton envelopeId={envelope.id} signerId={signer.id} recipientName={signer.name} compact />}</div>
               <div className="recipient-progress">
                 <div className={sent || signed ? "is-done" : ""}><span><Icon name="mail" size={14} /></span><small>Mailed</small></div>
                 <i className={viewed || signed ? "is-done" : ""} />
@@ -90,7 +93,7 @@ export default async function DocumentDetail({ params }: { params: { id: string 
           recipients={envelope.signers.map(({ id, name, email, status }) => ({ id, name, email, status }))}
         />
       ) : (
-        <DocumentSealingStatus id={envelope.id} />
+        <DocumentSealingStatus id={envelope.id} status={envelope.status} />
       )}
     </div>
   );

@@ -3,8 +3,9 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
+import SigningReminderButton from "@/components/SigningReminderButton";
 
-export default function DocumentDetailActions({ id, title }: { id: string; title: string }) {
+export default function DocumentDetailActions({ id, title, signed, canRemind }: { id: string; title: string; signed: boolean; canRemind: boolean }) {
   const router = useRouter();
   const [modal, setModal] = useState<"edit" | "email" | null>(null);
   const [nextTitle, setNextTitle] = useState(title);
@@ -54,11 +55,12 @@ export default function DocumentDetailActions({ id, title }: { id: string; title
   return (
     <>
       <nav className="document-detail-actions" aria-label="Document actions">
-        <button type="button" onClick={() => document.getElementById("signed-document")?.scrollIntoView({ behavior: "smooth" })}><Icon name="documents" size={17} /> View document</button>
+        {signed && <button type="button" onClick={() => document.getElementById("signed-document")?.scrollIntoView({ behavior: "smooth" })}><Icon name="documents" size={17} /> View document</button>}
         <button type="button" onClick={() => openModal("edit")}><Icon name="edit" size={17} /> Edit details</button>
-        <a href={`/api/envelopes/${id}/certificate`}><Icon name="certificate" size={17} /> Completion certificate</a>
-        <button type="button" onClick={() => openModal("email")}><Icon name="mail" size={17} /> Email document</button>
-        <a href={`/api/envelopes/${id}/document?version=signed&download=1`}><Icon name="download" size={17} /> Save PDF</a>
+        {canRemind && <SigningReminderButton envelopeId={id} />}
+        {signed && <a href={`/api/envelopes/${id}/certificate`}><Icon name="certificate" size={17} /> Completion certificate</a>}
+        {signed && <button type="button" onClick={() => openModal("email")}><Icon name="mail" size={17} /> Email document</button>}
+        {signed && <a href={`/api/envelopes/${id}/document?version=signed&download=1`}><Icon name="download" size={17} /> Save PDF</a>}
       </nav>
 
       {modal && (
