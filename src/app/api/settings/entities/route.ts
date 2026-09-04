@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getRequestContext, listAccessibleOrgs } from "@/lib/account";
+import { canAdminister, getRequestContext, listAccessibleOrgs } from "@/lib/account";
 import { prisma } from "@/lib/prisma";
 
 const entitySchema = z.object({
@@ -16,14 +16,14 @@ export async function GET() {
   return NextResponse.json({
     entities: await listAccessibleOrgs(),
     activeId: context.org.id,
-    canCreate: context.session.superAdmin,
+    canCreate: canAdminister(context),
   });
 }
 
 export async function POST(request: NextRequest) {
   const context = await getRequestContext();
   if (!context) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-  if (!context.session.superAdmin) return NextResponse.json({ error: "Only the BlendSign administrator can create companies." }, { status: 403 });
+  if (!canAdminister(context)) return NextResponse.json({ error: "Only a company administrator can create companies." }, { status: 403 });
   const parsed = entitySchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Enter a valid company name and email address." }, { status: 400 });
   const entity = await prisma.org.create({
