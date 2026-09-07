@@ -3,6 +3,7 @@ import { Icon } from "@/components/Icon";
 import { prisma } from "@/lib/prisma";
 import { getRequestContext } from "@/lib/account";
 import { redirect } from "next/navigation";
+import RecentDocumentActions from "@/components/RecentDocumentActions";
 
 export const dynamic = "force-dynamic";
 
@@ -77,7 +78,7 @@ export default async function Dashboard() {
                 <div className="recent-main"><strong>{envelope.title}</strong><small>{envelope.signers.length} signer{envelope.signers.length === 1 ? "" : "s"}</small></div>
                 <span className={`status status--${envelope.status.toLowerCase().replace("_", "-")}`}>{envelope.status.replaceAll("_", " ")}</span>
                 <time>{envelope.createdAt.toISOString().slice(0, 10)}</time>
-                <button className="icon-button"><Icon name="more" /></button>
+                <RecentDocumentActions id={envelope.id} signed={Boolean(envelope.signedKey)} />
               </div>
             ))}
           </div>
