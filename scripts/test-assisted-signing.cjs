@@ -33,6 +33,8 @@ function load(path, mocks) {
   const signers = [{name:'Customer',order:1,status:'PENDING',token:'test-customer',autoSign:false},{name:'Rep',order:2,status:'PENDING',token:'test-rep',autoSign:false}];
   record = {id:'envelope',status:'SENT',signers};
   let response = await GET(request,params); assert.equal(response.headers['cache-control'],'no-store'); assert.ok(response.data.signers[0].signingUrl); assert.equal(response.data.signers[1].signingUrl,null);
+  delete process.env.APP_URL; assert.equal((await GET(request,params)).data.signers[0].signingUrl, '/sign/test-customer');
+  process.env.APP_URL = 'https://signing.example.invalid';
   signers[0].status = 'SIGNED'; response = await GET(request,params); assert.equal(response.data.signers[0].signingUrl,null); assert.ok(response.data.signers[1].signingUrl);
   signers[1].autoSign = true; assert.equal((await GET(request,params)).data.signers[1].signingUrl,null);
   record.status='COMPLETED'; assert.ok((await GET(request,params)).data.signers.every(s=>!s.signingUrl));
