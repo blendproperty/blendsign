@@ -17,7 +17,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const pending = envelope.signers.filter(signer => signer.status !== "SIGNED");
   const order = Math.min(...pending.map(signer => signer.order));
   const base = (process.env.APP_URL || "").replace(/\/$/, "");
-  if (!base) return NextResponse.json({ error: "Signing address unavailable." }, { status: 503, headers });
   return NextResponse.json({
     envelopeId: envelope.id,
     status: envelope.status,
