@@ -1,3 +1,9 @@
+## Assisted STOR24 signing candidate - 8 October 2026
+
+- **Implementation:** from-template accepts invitationDelivery EMAIL (existing default) or ASSISTED. Assisted creation records the delivery choice and suppresses the first signing-invitation email; normal customer/representative routing, countersigning, webhook and final signed-copy delivery remain. A key-authenticated organisation-scoped no-store signing-session read returns links only for eligible manual signers at the current routing tier. Completed, expired, voided, declined and automatic-signing steps do not expose usable links. Portal uses this for guided counter/call signing. No schema or credential configuration changes.
+- **Testing:** executable delivery/authentication/organisation/routing/auto-signer/completed/expiry regression checks passed. Prisma/TypeScript and Next14 local build compiled/typechecked/rendered44 pages; a Windows dependency-junction standalone-copy warning requires Linux CI/deployment packaging proof. New CI runs the regression and production build. No live envelope/customer/email was created for tests.
+- **Commit and push:** prepared in isolated canonical codex/assisted-lease-signing-20261008 from remotemainc2f0773; source/context readback pending promotion. **Merge:** pending normal PR checks. **Deployment/configuration:** pending app/worker normal deployment before portal. **Live production verification:** pending authenticated integration read and deployed source/image proof.
+- **Open gates:** real customer/device and phone/counter UAT, receipt of completed PDF/certificate, representative authority, legal/privacy acceptance and existing provider/payment/finance/access/training/business gates remain open. Synthetic validation and technical deployment do not close these. No external tracker in scope.
 # BlendSign project context
 
 ## Verified Stor24 production baseline — 31 August 2026

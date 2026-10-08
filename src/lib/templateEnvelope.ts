@@ -27,6 +27,7 @@ export async function createEnvelopeFromTemplate({
   sourceType = "TEMPLATE",
   sourceName,
   data,
+  invitationDelivery = "EMAIL",
 }: {
   template: PreparedTemplate;
   recipients: RoleRecipient[];
@@ -38,6 +39,7 @@ export async function createEnvelopeFromTemplate({
   sourceType?: "TEMPLATE" | "SIGNFORM" | "API";
   sourceName?: string;
   data?: Record<string, string>;
+  invitationDelivery?: "EMAIL" | "ASSISTED";
 }) {
   const source = await getObjectBuffer(template.originalKey);
   const safeName = template.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -54,7 +56,7 @@ export async function createEnvelopeFromTemplate({
       idempotencyKey,
       originalKey,
       status: "SENT",
-      auditEvents: { create: { eventType: "created", metadata: { sourceType, sourceName, templateId: template.id, templateName: template.name, templateKey: template.apiIdentifier, templateVersion: template.version, externalSystem, externalReference } } },
+      auditEvents: { create: { eventType: "created", metadata: { sourceType, sourceName, templateId: template.id, templateName: template.name, templateKey: template.apiIdentifier, templateVersion: template.version, externalSystem, externalReference, invitationDelivery } } },
     },
   });
 
@@ -99,7 +101,7 @@ export async function createEnvelopeFromTemplate({
   if (fields.length) await prisma.field.createMany({ data: fields });
 
   const firstOrder = Math.min(...createdSigners.map((signer) => signer.order));
-  await Promise.all(
+  if (invitationDelivery === "EMAIL") await Promise.all(
     createdSigners
       .filter((signer) => signer.order === firstOrder)
       .map((signer) => enqueueSendSigningLink(signer.id))

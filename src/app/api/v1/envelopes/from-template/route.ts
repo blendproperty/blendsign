@@ -8,6 +8,7 @@ const requestSchema = z.object({
   templateKey: z.string().trim().min(1).max(120),
   externalReference: z.string().trim().min(1).max(160),
   title: z.string().trim().min(1).max(120).optional(),
+  invitationDelivery: z.enum(["EMAIL", "ASSISTED"]).default("EMAIL"),
   data: z.record(z.string(), z.string().max(5000)).default({}),
   recipients: z.array(z.object({
     role: z.string().trim().min(1).max(120),
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
       externalReference: parsed.data.externalReference,
       idempotencyKey,
       data: parsed.data.data,
+      invitationDelivery: parsed.data.invitationDelivery,
     });
     return NextResponse.json(envelopeResponse(result.envelope, result.signers, false), { status: 201 });
   } catch (error) {
