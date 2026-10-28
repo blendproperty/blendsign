@@ -1,3 +1,13 @@
+## 2026-10-28 - Verified Node 22.23.4 rollout (BlendSign)
+
+- Implementation: official Node 22.23.4 Alpine OCI digest pinned. Business/signing/provider behavior, dependency versions, schema, credentials and security/network settings unchanged.
+- Testing: PR 16 source dfa0f0e395a59bed0a4b7563589502c60f44d11e and exact-main CI 40636108901 passed assisted-signing regressions, production build and actual image/version checks.
+- Commit/push: scoped source/context published and read back. Merge: PR 16 normally merged as a6766ed07589aa796bb1e24bad8cf22eddbc449b. This subsequent evidence-only [skip ci] checkpoint triggers no application deployment.
+- Deployment/configuration: established production-environment workflow 40636805301 successfully deployed exact merged source after checks, with normal backup/migration/restart/login guards. No new migration included; prior app/worker images and readable database archive retained. Existing override preserved; full restore not newly tested.
+- Live verification: 2026-10-28T05:18:32.992570+00:00; app and worker running Node v22.23.4, zero restarts/OOM false. Images: blendsign-app-1 sha256:dc4b87ecbf4fad30a053b9e010110a18cfb7f81336a6b54fe900851ae44544c7; blendsign-worker-1 sha256:f5853ab0c08355742486a0dfefd2b194caedaeb2fde29c3a4df3cf55070908c9. Public login returned 200. Anonymous /api/v1/health returned 401 as its retained authentication boundary, not a healthy-200 claim; it was not retried or weakened. Separate read-only SELECT 1 through the running application's Prisma connection passed. Production checkout matched a6766ed07589aa796bb1e24bad8cf22eddbc449b. No real signatures, invitations, webhooks, completed-copy delivery or finance/provider transaction used for testing.
+- Gates: all prior staff/customer/device/UAT, source-data, provider delivery, signing/payment/settlement, finance, legal/privacy, training, physical-access, offline and full recovery/approval remain. No outbound test message, organisation migration or paused REA work. No tracker in scope.
+
+
 ## 2026-10-27 - Node.js 22.23.4 runtime patch candidate
 
 - **Implementation:** pin the actual application Docker stages to official Node 22.23.4 Alpine OCI digest; qualify the built runtime in CI. Retain the existing supported production major. Existing tests and production build remain required. No business features, dependencies, schemas, secrets, provider, permission or network settings change.
