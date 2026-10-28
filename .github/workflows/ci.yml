@@ -12,9 +12,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.23.4
           cache: npm
       - run: npm ci
       - run: npx prisma generate
       - run: node scripts/test-assisted-signing.cjs
       - run: npm run build
+
+      - name: Build and verify patched production image
+        run: |
+          docker build -t node-patch:ci .
+          test "$(docker run --rm --entrypoint node node-patch:ci --version)" = "v22.23.4"
